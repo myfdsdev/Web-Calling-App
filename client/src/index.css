@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  * {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-canvas text-ink font-sans;
+    font-size: 15px;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply text-ink;
+    letter-spacing: -0.01em;
+  }
+
+  ::selection {
+    background: rgba(255, 255, 255, 0.16);
+  }
+
+  /* Custom, subtle scrollbars */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #2c2c31 transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: #26262a;
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: #34343a;
+    background-clip: content-box;
+  }
+}
+
+@layer components {
+  .focus-ring {
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:ring-offset-0;
+  }
+
+  .skeleton {
+    @apply relative overflow-hidden rounded-lg bg-white/[0.06];
+  }
+  .skeleton::after {
+    content: '';
+    @apply absolute inset-0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+    animation: shimmer 1.4s infinite;
+  }
+}
+
+/* Respect reduced-motion: kill decorative/looping motion, keep opacity fades. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .skeleton::after {
+    animation: none !important;
+  }
+}

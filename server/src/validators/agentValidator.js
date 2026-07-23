@@ -1,0 +1,67 @@
+import { z } from 'zod';
+
+export const registerSchema = z.object({
+  name: z.string().min(2, 'Please enter your name').max(80),
+  email: z.string().email('Enter a valid email'),
+  password: z.string().min(6, 'Password must be at least 6 characters').max(200),
+});
+
+export const loginSchema = z.object({
+  email: z.string().email('Enter a valid email'),
+  password: z.string().min(1, 'Password is required'),
+});
+
+export const updateAgentSchema = z.object({
+  name: z.string().min(1).max(80).optional(),
+  businessName: z.string().max(120).optional(),
+  businessType: z.string().max(80).optional(),
+  purpose: z.string().max(120).optional(),
+  services: z.array(z.string().max(160)).max(30).optional(),
+  tone: z.array(z.string()).max(3).optional(),
+  languages: z.array(z.string()).max(6).optional(),
+  firstMessage: z.string().max(600).optional(),
+  escalationInstructions: z.string().max(600).optional(),
+  selectedVoiceId: z.string().optional(),
+  status: z.enum(['active', 'disabled']).optional(),
+
+  // Public-appearance fields — local only, never sent to Vapi.
+  isPublic: z.boolean().optional(),
+  tagline: z.string().max(120).optional(),
+  bio: z.string().max(600).optional(),
+  avatarUrl: z.string().url('Enter a valid image URL').max(500).optional().or(z.literal('')),
+  themeColor: z
+    .string()
+    .regex(/^#([0-9a-fA-F]{6})$/, 'Use a hex color like #6C5CE7')
+    .optional(),
+
+  // Public-page builder config — a flexible nested object (hero, sections,
+  // footer, custom code). Kept lenient; overall size is guarded in the controller.
+  pageSettings: z.record(z.any()).optional(),
+});
+
+/** Body for the public text-chat endpoint. */
+export const publicChatSchema = z.object({
+  sessionId: z.string().max(80).optional(),
+  messages: z
+    .array(
+      z.object({
+        role: z.enum(['user', 'assistant']),
+        content: z.string().min(1).max(2000),
+      })
+    )
+    .min(1, 'Say something to start the chat.')
+    .max(40),
+});
+
+/** Body for the public "a call started" lead ping. */
+export const callLeadSchema = z.object({
+  sessionId: z.string().max(80).optional(),
+});
+
+/** Owner lead update. */
+export const leadUpdateSchema = z.object({
+  status: z.enum(['new', 'contacted', 'qualified', 'closed']).optional(),
+  name: z.string().max(80).optional(),
+  email: z.string().max(160).optional(),
+  phone: z.string().max(40).optional(),
+});
