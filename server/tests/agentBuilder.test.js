@@ -13,7 +13,7 @@ describe('Agent Builder conversational flow', () => {
     expect(res.body.data.progress.currentStep).toBe(1);
   });
 
-  it('resumes an existing unfinished draft instead of creating a new one', async () => {
+  it('starts a brand-new agent on every visit — an abandoned draft never returns', async () => {
     const user = await makeUser();
     const first = await user.bearer(request(app).post('/api/agent-builder/start'));
     const draftId = first.body.data.draftId;
@@ -21,11 +21,27 @@ describe('Agent Builder conversational flow', () => {
       .bearer(request(app).post('/api/agent-builder/message'))
       .send({ draftId, message: 'Emma' });
 
+    // Coming back to "Create Agent" (no draftId) must NOT resume the old draft.
     const second = await user.bearer(request(app).post('/api/agent-builder/start'));
-    expect(second.body.data.resumed).toBe(true);
-    expect(second.body.data.draftId).toBe(draftId);
-    expect(second.body.data.draft.agentName).toBe('Emma');
-    expect(second.body.data.draft.currentStep).toBe(2);
+    expect(second.body.data.resumed).toBe(false);
+    expect(second.body.data.draftId).not.toBe(draftId);
+    expect(second.body.data.draft.agentName).toBe('');
+    expect(second.body.data.draft.currentStep).toBe(1);
+  });
+
+  it('resumes the same draft when the page is refreshed (draftId sent explicitly)', async () => {
+    const user = await makeUser();
+    const first = await user.bearer(request(app).post('/api/agent-builder/start'));
+    const draftId = first.body.data.draftId;
+    await user
+      .bearer(request(app).post('/api/agent-builder/message'))
+      .send({ draftId, message: 'Emma' });
+
+    const refreshed = await user.bearer(request(app).post('/api/agent-builder/start')).send({ draftId });
+    expect(refreshed.body.data.resumed).toBe(true);
+    expect(refreshed.body.data.draftId).toBe(draftId);
+    expect(refreshed.body.data.draft.agentName).toBe('Emma');
+    expect(refreshed.body.data.draft.currentStep).toBe(2);
   });
 
   it('asks one question at a time and advances the step', async () => {
@@ -49,14 +65,25 @@ describe('Agent Builder conversational flow', () => {
     expect(draft.agentName).toBe('Emma');
     expect(draft.businessName).toBe('Green Valley Real Estate');
     expect(draft.businessType).toBe('Real Estate');
+    expect(draft.businessLocation).toBe('Jaipur, Rajasthan');
     expect(draft.agentPurpose).toBe('Appointment Booking');
     expect(draft.services).toEqual(expect.arrayContaining(['Property buying', 'Rentals', 'Site visits']));
     expect(draft.tone).toEqual(['Friendly', 'Professional']);
     expect(draft.languages).toEqual(['English', 'Hindi']);
     expect(draft.firstMessage).toMatch(/Green Valley/);
-    expect(draft.selectedVoiceId).toBe('Elliot'); // internal 'ava' -> Vapi voiceId
-    expect(draft.selectedVoiceName).toBe('Ava');
+    // The user never picks a voice — a Hindi-speaking agent gets an Indian voice.
+    expect(draft.selectedVoiceId).toBe('Neha');
+    expect(draft.selectedVoiceName).toBe('Neha');
     expect(draft.completionPercentage).toBe(100);
+  });
+
+  it('picks the voice automatically — there is no voice step', async () => {
+    const user = await makeUser();
+    const flow = await user.bearer(request(app).get('/api/agent-builder/flow'));
+    const stepKeys = flow.body.data.steps.map((s) => s.stepKey);
+    expect(stepKeys).not.toContain('voice');
+    expect(stepKeys).toContain('businessLocation');
+    expect(flow.body.data.totalSteps).toBe(10);
   });
 
   it('limits tone selections to three', async () => {
@@ -64,11 +91,12 @@ describe('Agent Builder conversational flow', () => {
     const start = await user.bearer(request(app).post('/api/agent-builder/start'));
     const draftId = start.body.data.draftId;
     const send = (p) => user.bearer(request(app).post('/api/agent-builder/message')).send({ draftId, ...p });
-    await send({ message: 'Emma' });
-    await send({ message: 'Acme' });
-    await send({ value: 'Real Estate' });
-    await send({ value: 'Sales Enquiries' });
-    await send({ message: 'Consulting' });
+    await send({ message: 'Emma' }); // name
+    await send({ message: 'Acme' }); // business
+    await send({ value: 'Real Estate' }); // type
+    await send({ message: 'Pune' }); // location
+    await send({ value: 'Sales Enquiries' }); // purpose
+    await send({ message: 'Consulting' }); // services
     const res = await send({ values: ['Friendly', 'Professional', 'Warm', 'Confident', 'Calm'] });
     expect(res.body.data.draft.tone).toHaveLength(3);
   });

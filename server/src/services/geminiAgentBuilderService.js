@@ -110,6 +110,40 @@ Rules:
   return { extractedValue: value, assistantAck: ack };
 }
 
+/**
+ * Infer what kind of business this is from its name, so the builder can ask
+ * "looks like a X business — is that right?" with tailored options instead of
+ * a generic list. Falls back to the flow's static options if Gemini is off.
+ */
+export async function suggestBusinessTypes(businessName) {
+  const name = String(businessName || '').trim();
+  if (!name || !geminiEnabled()) return null;
+
+  const prompt = `A user is setting up a phone assistant for their business named "${name.replace(/"/g, "'")}".
+
+Infer what kind of business it most likely is.
+
+Return ONLY JSON:
+{"guess": "<the single most likely business type, 1-3 words>",
+ "options": ["<4 to 5 plausible business types, most likely first, each 1-3 words>"]}
+
+Rules:
+- "guess" must also be the first item of "options".
+- Use everyday category names a business owner would recognise (e.g. "Bus & Travel", "Dental Clinic", "Restaurant").
+- If the name gives no clue, return common categories.`;
+
+  const json = await callGemini(prompt);
+  const guess = typeof json?.guess === 'string' ? json.guess.trim() : '';
+  const options = Array.isArray(json?.options)
+    ? json.options.map((o) => String(o).trim()).filter(Boolean).slice(0, 5)
+    : [];
+  if (!guess || options.length === 0) return null;
+
+  // Guarantee the guess leads the list and entries are unique.
+  const unique = [guess, ...options.filter((o) => o.toLowerCase() !== guess.toLowerCase())].slice(0, 5);
+  return { guess, options: unique };
+}
+
 /** Generate a warm, on-brand opening line for the agent. */
 export async function generateGreeting(draft) {
   if (!geminiEnabled()) return buildGreeting(draft);
@@ -138,6 +172,7 @@ export async function generateSystemPrompt(draft) {
 Details:
 - Agent name: ${draft.agentName}
 - Business: ${draft.businessName} (${draft.businessType || 'general business'})
+- Location: ${draft.businessLocation || 'not specified'}
 - Purpose: ${draft.agentPurpose}
 - Services: ${(draft.services || []).join('; ') || 'not specified'}
 - Tone: ${(draft.tone || []).join(', ') || 'friendly, professional'}

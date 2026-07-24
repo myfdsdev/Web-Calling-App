@@ -7,6 +7,7 @@ const agentDraftSchema = new mongoose.Schema(
     agentName: { type: String, default: '' },
     businessName: { type: String, default: '' },
     businessType: { type: String, default: '' },
+    businessLocation: { type: String, default: '' },
 
     agentPurpose: { type: String, default: '' },
     services: { type: [String], default: [] },
@@ -48,6 +49,7 @@ agentDraftSchema.methods.toJSONView = function toJSONView() {
     agentName: this.agentName,
     businessName: this.businessName,
     businessType: this.businessType,
+    businessLocation: this.businessLocation,
     agentPurpose: this.agentPurpose,
     services: this.services,
     tone: this.tone,

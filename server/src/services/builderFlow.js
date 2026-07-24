@@ -33,6 +33,8 @@ export const FLOW = [
     placeholder: 'e.g. Green Valley Real Estate',
   },
   {
+    // The options here are a FALLBACK — the controller replaces them with
+    // AI-inferred suggestions based on the business name whenever possible.
     step: 3,
     stepKey: 'businessType',
     field: 'businessType',
@@ -52,6 +54,16 @@ export const FLOW = [
   },
   {
     step: 4,
+    stepKey: 'businessLocation',
+    field: 'businessLocation',
+    title: 'Location',
+    question:
+      'Where is your business based? This helps the agent answer “where are you located?” and set expectations about timings.',
+    inputType: 'text',
+    placeholder: 'e.g. Jaipur, Rajasthan — or “Online only”',
+  },
+  {
+    step: 5,
     stepKey: 'agentPurpose',
     field: 'agentPurpose',
     title: 'Agent Purpose',
@@ -68,7 +80,7 @@ export const FLOW = [
     ],
   },
   {
-    step: 5,
+    step: 6,
     stepKey: 'services',
     field: 'services',
     title: 'Services',
@@ -78,7 +90,7 @@ export const FLOW = [
     placeholder: 'e.g.\nProperty buying & selling\nRentals\nSite visits & valuations',
   },
   {
-    step: 6,
+    step: 7,
     stepKey: 'tone',
     field: 'tone',
     title: 'Tone',
@@ -95,7 +107,7 @@ export const FLOW = [
     ],
   },
   {
-    step: 7,
+    step: 8,
     stepKey: 'languages',
     field: 'languages',
     title: 'Language',
@@ -112,7 +124,7 @@ export const FLOW = [
     ],
   },
   {
-    step: 8,
+    step: 9,
     stepKey: 'firstMessage',
     field: 'firstMessage',
     title: 'Greeting',
@@ -125,7 +137,7 @@ export const FLOW = [
     ],
   },
   {
-    step: 9,
+    step: 10,
     stepKey: 'escalationInstructions',
     field: 'escalationInstructions',
     title: 'Human Escalation',
@@ -139,15 +151,6 @@ export const FLOW = [
       { label: 'End politely', value: 'Politely wrap up the call and suggest they try again during business hours.' },
       { label: 'Custom instruction', value: '__custom__' },
     ],
-  },
-  {
-    step: 10,
-    stepKey: 'voice',
-    field: 'voice',
-    title: 'Voice',
-    question:
-      'Last step — choose the voice your agent will speak with. Tap a card to preview and select.',
-    inputType: 'voice',
   },
 ];
 
@@ -175,13 +178,13 @@ export function computeCompletion(draft) {
     Boolean(draft.agentName),
     Boolean(draft.businessName),
     Boolean(draft.businessType),
+    Boolean(draft.businessLocation),
     Boolean(draft.agentPurpose),
     Array.isArray(draft.services) && draft.services.length > 0,
     Array.isArray(draft.tone) && draft.tone.length > 0,
     Array.isArray(draft.languages) && draft.languages.length > 0,
     Boolean(draft.firstMessage),
     Boolean(draft.escalationInstructions),
-    Boolean(draft.selectedVoiceId),
   ];
   const done = checks.filter(Boolean).length;
   return Math.round((done / checks.length) * 100);
@@ -193,6 +196,33 @@ export function isReadyForReview(draft) {
     const v = draft[f];
     return Array.isArray(v) ? v.length > 0 : Boolean(v);
   }) && Boolean(draft.selectedVoiceId);
+}
+
+/**
+ * Pick the voice that best fits the draft — the user is never asked to choose
+ * one during setup. Language wins first (an Indian-accent voice for Hindi),
+ * then tone. Callers can still change it later from Edit Agent.
+ */
+export function pickVoiceForDraft(draft, voices) {
+  if (!Array.isArray(voices) || voices.length === 0) return null;
+  const byId = (id) => voices.find((v) => v.id === id);
+
+  const langs = (draft.languages || []).map((l) => String(l).toLowerCase());
+  const tone = (draft.tone || []).map((t) => String(t).toLowerCase());
+  const speaksHindi = langs.some((l) => l.includes('hindi'));
+
+  let preferred;
+  if (speaksHindi) {
+    preferred = tone.includes('energetic') || tone.includes('confident') ? 'rohan' : 'neha';
+  } else if (tone.includes('confident') || tone.includes('professional')) {
+    preferred = tone.includes('confident') ? 'harry' : 'paige';
+  } else if (tone.includes('energetic')) {
+    preferred = 'rohan';
+  } else {
+    preferred = 'ava'; // warm, friendly default
+  }
+
+  return byId(preferred) || byId('ava') || voices[0];
 }
 
 /** Split a free-text services answer into a clean array. */

@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-import { Check, Play, Pause, Sparkles, ArrowRight, MessagesSquare } from 'lucide-react';
+import { Check, Sparkles, ArrowRight, MessagesSquare } from 'lucide-react';
 import { Card } from '../ui/Card.jsx';
 import { Button } from '../ui/Button.jsx';
 import { Input, Textarea } from '../ui/Input.jsx';
-import { useAudioPreview } from '../../hooks/useAudioPreview.js';
 import { cn } from '../../lib/cn.js';
 
 const TONE_OPTIONS = ['Friendly', 'Professional', 'Warm', 'Confident', 'Calm', 'Energetic'];
@@ -76,68 +75,23 @@ function SuggestChips({ options, value, onPick }) {
   );
 }
 
-/** Voice cards with inline preview. */
-function VoicePicker({ voices, value, onChange }) {
-  const { play, playingId } = useAudioPreview();
-  return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-      {voices.map((v) => {
-        const active = value === v.voiceId;
-        return (
-          <button
-            key={v.id}
-            type="button"
-            onClick={() => onChange(v.voiceId)}
-            className={cn(
-              'relative flex items-center gap-3 rounded-xl border p-3.5 text-left transition-all',
-              active ? 'border-2 border-primary bg-primary-soft/60' : 'border-line bg-surface hover:border-primary/40'
-            )}
-          >
-            <span className="flex h-10 w-10 flex-none items-center justify-center rounded-lg border border-white/10 bg-white/[0.06] text-sm font-bold text-ink">
-              {v.name.slice(0, 2)}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-ink">{v.name}</p>
-              <p className="truncate text-[12px] text-ink-soft">{v.type}</p>
-            </div>
-            <span
-              role="button"
-              tabIndex={0}
-              onClick={(e) => {
-                e.stopPropagation();
-                play(v);
-              }}
-              className={cn(
-                'flex h-8 w-8 flex-none items-center justify-center rounded-lg border',
-                playingId === v.id ? 'border-primary bg-primary text-[#0A0A0A]' : 'border-line text-ink-soft'
-              )}
-            >
-              {playingId === v.id ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-            </span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 /**
  * Manual agent builder — the alternative to the conversational chatbot. Users
  * fill in every detail themselves; submitting takes them to the same review
  * screen the chat flow ends on.
  */
-export function ManualAgentForm({ voices, submitting, onSubmit, onSwitchToChat }) {
+export function ManualAgentForm({ submitting, onSubmit, onSwitchToChat }) {
   const [form, setForm] = useState({
     agentName: '',
     businessName: '',
     businessType: '',
+    businessLocation: '',
     agentPurpose: '',
     servicesText: '',
     tone: [],
     languages: ['English'],
     firstMessage: '',
     escalationInstructions: '',
-    selectedVoiceId: '',
   });
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
@@ -153,11 +107,11 @@ export function ManualAgentForm({ voices, submitting, onSubmit, onSwitchToChat }
     if (!form.agentName.trim()) missing.push('agent name');
     if (!form.businessName.trim()) missing.push('business name');
     if (!form.businessType.trim()) missing.push('business type');
+    if (!form.businessLocation.trim()) missing.push('location');
     if (!form.agentPurpose.trim()) missing.push('purpose');
     if (!form.tone.length) missing.push('tone');
     if (!form.languages.length) missing.push('language');
     if (!form.firstMessage.trim()) missing.push('opening message');
-    if (!form.selectedVoiceId) missing.push('voice');
     if (missing.length) {
       toast.error(`Please fill in: ${missing.join(', ')}.`);
       return;
@@ -166,13 +120,13 @@ export function ManualAgentForm({ voices, submitting, onSubmit, onSwitchToChat }
       agentName: form.agentName.trim(),
       businessName: form.businessName.trim(),
       businessType: form.businessType.trim(),
+      businessLocation: form.businessLocation.trim(),
       agentPurpose: form.agentPurpose.trim(),
       services: form.servicesText.split(/\r?\n/).map((s) => s.trim()).filter(Boolean),
       tone: form.tone,
       languages: form.languages,
       firstMessage: form.firstMessage.trim(),
       escalationInstructions: form.escalationInstructions.trim(),
-      selectedVoiceId: form.selectedVoiceId,
     });
   };
 
@@ -220,6 +174,14 @@ export function ManualAgentForm({ voices, submitting, onSubmit, onSwitchToChat }
             placeholder="e.g. Real Estate"
             value={form.businessType}
             onChange={(e) => set({ businessType: e.target.value })}
+          />
+        </div>
+        <div className="mt-4">
+          <Input
+            label="Location"
+            placeholder="e.g. Jaipur, Rajasthan — or “Online only”"
+            value={form.businessLocation}
+            onChange={(e) => set({ businessLocation: e.target.value })}
           />
         </div>
         <div className="mt-4">
@@ -280,20 +242,6 @@ export function ManualAgentForm({ voices, submitting, onSubmit, onSwitchToChat }
             placeholder="e.g. Collect the caller's name and number so the team can follow up."
           />
         </div>
-      </Card>
-
-      {/* Voice */}
-      <Card className="p-6">
-        <h3 className="mb-4 text-card-title font-semibold text-ink">Voice</h3>
-        {voices.length ? (
-          <VoicePicker
-            voices={voices}
-            value={form.selectedVoiceId}
-            onChange={(selectedVoiceId) => set({ selectedVoiceId })}
-          />
-        ) : (
-          <p className="text-sm text-ink-soft">Loading voices…</p>
-        )}
       </Card>
 
       {/* Actions */}

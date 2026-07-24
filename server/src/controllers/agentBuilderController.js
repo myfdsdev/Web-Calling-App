@@ -3,7 +3,12 @@ import { AgentBuilderMessage } from '../models/AgentBuilderMessage.js';
 import { Agent } from '../models/Agent.js';
 import { ok, AppError } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { messageSchema, patchDraftSchema, generateGreetingSchema } from '../validators/agentBuilderValidator.js';
+import {
+  startSchema,
+  messageSchema,
+  patchDraftSchema,
+  generateGreetingSchema,
+} from '../validators/agentBuilderValidator.js';
 import { SUPPORTED_VOICES, getVoiceById } from '../config/voices.js';
 import {
   FLOW,
@@ -21,7 +26,14 @@ import {
   recomputeAndSave,
   draftProgress,
 } from '../services/agentDraftService.js';
-import { extractAnswer, generateGreeting, generateSystemPrompt } from '../services/geminiAgentBuilderService.js';
+import {
+  extractAnswer,
+  generateGreeting,
+  generateSystemPrompt,
+  suggestBusinessTypes,
+} from '../services/geminiAgentBuilderService.js';
+import { getPlan } from '../config/plans.js';
+import { getAccount } from '../services/creditService.js';
 import { buildAssistantPayload, createAssistant } from '../services/vapiAssistantService.js';
 
 const REVIEW_MESSAGE =
@@ -32,13 +44,32 @@ function reviewUi() {
 }
 
 /** Build the assistant message payload for the draft's current position. */
-function assistantForCurrent(draft, ackPrefix = '') {
+async function assistantForCurrent(draft, ackPrefix = '') {
   if (draft.currentStep > TOTAL_STEPS) {
     return { content: REVIEW_MESSAGE, stepKey: 'review', structuredData: { ui: reviewUi() } };
   }
   const step = getStep(draft.currentStep);
-  const content = ackPrefix ? `${ackPrefix} ${step.question}` : step.question;
-  return { content, stepKey: step.stepKey, structuredData: { ui: stepUi(step) } };
+  let ui = stepUi(step);
+  let question = step.question;
+
+  // Business type: infer likely categories from the business name so the user
+  // confirms a tailored guess instead of scanning a generic list.
+  if (step.stepKey === 'businessType' && draft.businessName) {
+    const suggested = await suggestBusinessTypes(draft.businessName).catch(() => null);
+    if (suggested) {
+      question = `“${draft.businessName}” looks like a ${suggested.guess} business — is that right? Pick the closest match:`;
+      ui = {
+        ...ui,
+        options: [
+          ...suggested.options.map((o) => ({ label: o, value: o })),
+          { label: 'Something else', value: '__custom__' },
+        ],
+      };
+    }
+  }
+
+  const content = ackPrefix ? `${ackPrefix} ${question}` : question;
+  return { content, stepKey: step.stepKey, structuredData: { ui } };
 }
 
 // ── Languages helper: "English and Hindi" -> ["English","Hindi"] ─────────────
@@ -52,21 +83,38 @@ function splitLanguages(value) {
 
 /**
  * POST /api/agent-builder/start
- * Return the user's unfinished draft (resume) or create a fresh one.
+ *
+ * Every visit begins a BRAND-NEW agent. A draft is only resumed when the client
+ * asks for one by id — which it does after a page refresh, so an in-progress
+ * conversation survives F5 without half-finished drafts coming back later.
  */
 export const start = asyncHandler(async (req, res) => {
   const userId = req.user.id;
+  const { draftId: requestedId } = startSchema.parse(req.body || {});
 
-  let draft = await AgentDraft.findOne({
-    userId,
-    status: { $in: ['draft', 'ready-for-review', 'failed'] },
-  }).sort({ updatedAt: -1 });
+  let draft = null;
+  let resumed = false;
 
-  let resumed = true;
+  if (requestedId) {
+    draft = await AgentDraft.findOne({
+      _id: requestedId,
+      userId,
+      status: { $in: ['draft', 'ready-for-review', 'failed'] },
+    });
+    resumed = Boolean(draft);
+  }
+
   if (!draft) {
-    resumed = false;
+    // Discard abandoned mid-conversation drafts so they can never resurface.
+    const stale = await AgentDraft.find({ userId, status: 'draft' }).select('_id');
+    if (stale.length) {
+      const ids = stale.map((d) => d._id);
+      await AgentBuilderMessage.deleteMany({ draftId: { $in: ids } });
+      await AgentDraft.deleteMany({ _id: { $in: ids } });
+    }
+
     draft = await AgentDraft.create({ userId, currentStep: 1, completionPercentage: 5, status: 'draft' });
-    const first = assistantForCurrent(draft);
+    const first = await assistantForCurrent(draft);
     await addMessage(draft, userId, 'assistant', first.content, first.stepKey, first.structuredData);
   }
 
@@ -80,7 +128,7 @@ export const start = asyncHandler(async (req, res) => {
     messages: messages.map((m) => m.toJSONView()),
     assistantMessage: messages.length
       ? messages[messages.length - 1].toJSONView()
-      : assistantForCurrent(draft),
+      : await assistantForCurrent(draft),
   });
 });
 
@@ -193,7 +241,7 @@ export const message = asyncHandler(async (req, res) => {
 
   const assistant = isEditingPast
     ? { content: ackPrefix, stepKey: targetStep.stepKey, structuredData: { ui: reviewUi() } }
-    : assistantForCurrent(draft, draft.currentStep > TOTAL_STEPS ? '' : ackPrefix);
+    : await assistantForCurrent(draft, draft.currentStep > TOTAL_STEPS ? '' : ackPrefix);
 
   // When we've just crossed into review, prepend the ack to the review message.
   if (!isEditingPast && draft.currentStep > TOTAL_STEPS && ackPrefix) {
@@ -312,6 +360,18 @@ export const createVapiAgent = asyncHandler(async (req, res) => {
     return ok(res, { agent: existingAgent.toJSONView(), alreadyCreated: true }, 'Agent already created.');
   }
 
+  // Enforce the plan's agent allowance before creating anything on Vapi.
+  const account = await getAccount(userId);
+  const plan = getPlan(account?.plan);
+  const agentCount = await Agent.countDocuments({ userId });
+  if (agentCount >= plan.maxAgents) {
+    throw new AppError(
+      `Your ${plan.name} plan includes ${plan.maxAgents} agent${plan.maxAgents === 1 ? '' : 's'}. Upgrade to create more.`,
+      403,
+      'PLAN_AGENT_LIMIT'
+    );
+  }
+
   // Atomically claim the draft for creation (prevents duplicate submissions).
   const draft = await AgentDraft.findOneAndUpdate(
     { _id: req.params.draftId, userId, status: { $in: ['draft', 'ready-for-review', 'failed'] } },
@@ -349,6 +409,7 @@ export const createVapiAgent = asyncHandler(async (req, res) => {
       name: draft.agentName,
       businessName: draft.businessName,
       businessType: draft.businessType,
+      businessLocation: draft.businessLocation,
       purpose: draft.agentPurpose,
       services: draft.services,
       tone: draft.tone,

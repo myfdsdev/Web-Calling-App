@@ -67,11 +67,16 @@ export function buildSystemPrompt(draft) {
 
   const lines = [];
 
+  const location = draft.businessLocation?.trim();
+
   lines.push(
     `You are ${name}, the AI voice assistant for ${business}${
       businessType ? `, a ${businessType.toLowerCase()} business` : ''
-    }.`
+    }${location ? ` based in ${location}` : ''}.`
   );
+  if (location) {
+    lines.push(`If a caller asks where you are located, say: ${location}.`);
+  }
   lines.push('');
 
   lines.push('Identity:');

@@ -1,50 +1,63 @@
-/** Shared shape + merge helper for the public-page builder settings. */
+/**
+ * Shared shape + merge helper for the public agent page.
+ *
+ * The public page is nothing more than the chat/call widget, so these are the
+ * only settings an owner can configure. (Older drafts may still carry hero /
+ * footer / product keys from a previous design — they're simply ignored.)
+ */
 
 export const DEFAULT_PAGE_SETTINGS = {
-  hero: {
-    enabled: true,
-    storeLogo: '',
-    heroSideImage: '',
-    alignment: 'right',
-    badge: '',
-    headline: '',
-    subtitle: '',
-    primaryCta: '',
-    secondaryCta: '',
-    background: 'gradient',
-    startColor: '#6C5CE7',
-    endColor: '#0A0A0A',
-    backgroundImage: '',
-    opacity: 100,
+  chatWidget: {
+    image: '',
+    name: '',
+    role: '',
+    description: '',
+
+    // Page backdrop
+    bgStart: '#1B1B3A',
+    bgEnd: '#0B0B14',
+
+    // "Start the conversation" button
+    ctaLabel: '',
+    ctaFrom: '#F97316',
+    ctaTo: '#14B8A6',
+
+    // "Start a voice call" button
+    callLabel: '',
+    callFrom: '#14B8A6',
+    callTo: '#6366F1',
   },
-  products: { enabled: true, title: 'Featured Deals' },
-  testimonials: { enabled: false },
-  faq: { enabled: false },
-  customBoxes: { enabled: false },
-  customBanner: { enabled: false },
-  trustBadges: { enabled: false },
-  footer: {
-    enabled: true,
-    text: '© 2025 Your Store. All rights reserved.',
-    logo: '',
-    social: { facebook: '', instagram: '', twitter: '', linkedin: '', youtube: '', tiktok: '' },
-  },
-  customCode: { headCode: '', bodyCode: '' },
 };
 
-/** Deep-merge stored settings over the defaults so old/partial data still works. */
+/** Merge stored settings over the defaults so old/partial data still works. */
 export function withPageDefaults(ps = {}) {
   const d = DEFAULT_PAGE_SETTINGS;
   ps = ps || {};
   return {
-    hero: { ...d.hero, ...(ps.hero || {}) },
-    products: { ...d.products, ...(ps.products || {}) },
-    testimonials: { ...d.testimonials, ...(ps.testimonials || {}) },
-    faq: { ...d.faq, ...(ps.faq || {}) },
-    customBoxes: { ...d.customBoxes, ...(ps.customBoxes || {}) },
-    customBanner: { ...d.customBanner, ...(ps.customBanner || {}) },
-    trustBadges: { ...d.trustBadges, ...(ps.trustBadges || {}) },
-    footer: { ...d.footer, ...(ps.footer || {}), social: { ...d.footer.social, ...((ps.footer || {}).social || {}) } },
-    customCode: { ...d.customCode, ...(ps.customCode || {}) },
+    chatWidget: { ...d.chatWidget, ...(ps.chatWidget || {}) },
   };
+}
+
+/** The shared page/widget backdrop built from the owner's two colours. */
+export function widgetBackground(w = {}) {
+  const start = w.bgStart || DEFAULT_PAGE_SETTINGS.chatWidget.bgStart;
+  const end = w.bgEnd || DEFAULT_PAGE_SETTINGS.chatWidget.bgEnd;
+  return { background: `radial-gradient(1100px 600px at 50% -10%, ${start}, ${end} 62%)` };
+}
+
+/** Left-to-right gradient for a configurable button. */
+export function gradientStyle(from, to, fallbackFrom, fallbackTo) {
+  return {
+    backgroundImage: `linear-gradient(90deg, ${from || fallbackFrom}, ${to || fallbackTo})`,
+  };
+}
+
+/** Ready-made styles for the two call-to-action buttons. */
+export function ctaStyle(w = {}) {
+  const d = DEFAULT_PAGE_SETTINGS.chatWidget;
+  return gradientStyle(w.ctaFrom, w.ctaTo, d.ctaFrom, d.ctaTo);
+}
+export function callStyle(w = {}) {
+  const d = DEFAULT_PAGE_SETTINGS.chatWidget;
+  return gradientStyle(w.callFrom, w.callTo, d.callFrom, d.callTo);
 }

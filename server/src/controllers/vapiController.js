@@ -2,6 +2,8 @@ import { Agent } from '../models/Agent.js';
 import { ok } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { env, vapiEnabled } from '../config/env.js';
+import { creditsForCallSeconds } from '../config/plans.js';
+import { spend } from '../services/creditService.js';
 
 /**
  * GET /api/vapi/config
@@ -70,6 +72,22 @@ export const webhook = asyncHandler(async (req, res) => {
           agent.stats.totalCallSeconds += seconds;
           agent.stats.lastCallAt = new Date();
           await agent.save();
+
+          // Bill the owner for the call. It already happened, so if the balance
+          // is short we drain what's left rather than skipping the charge.
+          const cost = creditsForCallSeconds(seconds);
+          if (cost > 0) {
+            const details = {
+              source: 'call',
+              reason: `Voice call · ${Math.ceil(seconds / 60)} min`,
+              agentId: agent._id,
+              meta: { seconds },
+            };
+            const charged = await spend(agent.userId, cost, details);
+            if (!charged.ok && charged.balance > 0) {
+              await spend(agent.userId, charged.balance, { ...details, reason: `${details.reason} (partial)` });
+            }
+          }
         }
       }
     }

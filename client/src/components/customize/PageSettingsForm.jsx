@@ -1,70 +1,15 @@
 import { useRef } from 'react';
 import { toast } from 'sonner';
-import {
-  Image as ImageIcon,
-  Package,
-  MessageSquare,
-  HelpCircle,
-  Layers,
-  ImagePlus,
-  ShieldCheck,
-  PanelBottom,
-  Code2,
-  ToggleRight,
-  ToggleLeft,
-  FolderOpen,
-  AlertTriangle,
-  FileText,
-} from 'lucide-react';
+import { Bot, FolderOpen, Sparkles } from 'lucide-react';
 import { Card } from '../ui/Card.jsx';
 import { Button } from '../ui/Button.jsx';
 import { Input, Textarea } from '../ui/Input.jsx';
-import { hexAlpha } from '../../utils/agentHelpers.js';
 import { cn } from '../../lib/cn.js';
 
 // Shared shape/merge live in utils so the public page can reuse them without
 // pulling this admin form into its bundle. Re-exported for existing imports.
 export { DEFAULT_PAGE_SETTINGS, withPageDefaults } from '../../utils/pageSettings.js';
-
-// ── Small building blocks ────────────────────────────────────────────────────
-
-function EnablePill({ enabled, onToggle }) {
-  return (
-    <button
-      type="button"
-      onClick={() => onToggle(!enabled)}
-      className={cn(
-        'inline-flex flex-none items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] font-semibold transition-colors',
-        enabled ? 'border-primary/30 bg-primary-soft text-ink' : 'border-line text-ink-soft hover:text-ink'
-      )}
-    >
-      {enabled ? <ToggleRight className="h-4 w-4 text-primary" /> : <ToggleLeft className="h-4 w-4" />}
-      {enabled ? 'Enabled' : 'Disabled'}
-    </button>
-  );
-}
-
-function SectionShell({ icon: Icon, title, subtitle, enabled, onToggle, children }) {
-  return (
-    <Card className="overflow-hidden">
-      <div className="flex items-center justify-between gap-3 px-5 py-4 sm:px-6">
-        <div className="flex items-center gap-3">
-          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-white/[0.06] text-ink-soft">
-            <Icon className="h-5 w-5" />
-          </span>
-          <div>
-            <p className="text-card-title font-semibold text-ink">{title}</p>
-            {subtitle && <p className="text-[12px] text-ink-soft">{subtitle}</p>}
-          </div>
-        </div>
-        {onToggle && <EnablePill enabled={enabled} onToggle={onToggle} />}
-      </div>
-      {enabled && children && (
-        <div className="space-y-5 border-t border-line/70 px-5 py-5 sm:px-6">{children}</div>
-      )}
-    </Card>
-  );
-}
+import { widgetBackground, ctaStyle, callStyle } from '../../utils/pageSettings.js';
 
 function Field({ label, hint, children }) {
   return (
@@ -78,61 +23,60 @@ function Field({ label, hint, children }) {
   );
 }
 
-function Segmented({ options, value, onChange }) {
-  return (
-    <div className="inline-flex gap-1 rounded-lg border border-line bg-surface p-1">
-      {options.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          onClick={() => onChange(o.value)}
-          className={cn(
-            'rounded-md px-3.5 py-1.5 text-[13px] font-semibold transition-colors',
-            value === o.value ? 'bg-white/[0.1] text-ink' : 'text-ink-soft hover:text-ink'
-          )}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  );
+/**
+ * Shrink a picked image to an avatar-sized square-ish thumbnail. Any photo is
+ * accepted — it's downscaled and compressed in the browser, so we never have to
+ * reject a file for being too large. WebP first (small + keeps transparency),
+ * PNG as the fallback for browsers without WebP encoding.
+ */
+function downscaleImage(file, max = 256) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('read failed'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('decode failed'));
+      img.onload = () => {
+        const scale = Math.min(1, max / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        let out = canvas.toDataURL('image/webp', 0.9);
+        if (!out.startsWith('data:image/webp')) out = canvas.toDataURL('image/png');
+        resolve(out);
+      };
+      img.src = String(reader.result || '');
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
-function ColorField({ label, value, onChange }) {
-  return (
-    <div>
-      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-soft">{label}</p>
-      <div className="flex items-center gap-2">
-        <input
-          type="color"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="h-9 w-9 flex-none cursor-pointer rounded-lg border border-line bg-surface p-1"
-          aria-label={label}
-        />
-        <Input value={value} onChange={(e) => onChange(e.target.value)} className="font-mono" />
-      </div>
-    </div>
-  );
-}
-
-/** URL input + Browse (local file → data URL for quick previews). */
+/** URL input + Browse (local file is resized in-browser, then embedded). */
 function BrowseInput({ value = '', onChange, placeholder }) {
   const fileRef = useRef(null);
   const isData = value.startsWith('data:');
 
-  const onFile = (e) => {
+  const onFile = async (e) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
-    if (file.size > 300 * 1024) {
-      toast.error('Image is too large (max 300KB). Please paste a hosted URL instead.');
-      e.target.value = '';
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please choose an image file.');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => onChange(String(reader.result || ''));
-    reader.readAsDataURL(file);
-    e.target.value = '';
+    // Guard against decoding an absurd file and freezing the tab.
+    if (file.size > 15 * 1024 * 1024) {
+      toast.error('That image is enormous. Please pick one under 15MB.');
+      return;
+    }
+    try {
+      onChange(await downscaleImage(file));
+    } catch {
+      toast.error('Could not read that image. Try a different file.');
+    }
   };
 
   return (
@@ -156,249 +100,179 @@ function BrowseInput({ value = '', onChange, placeholder }) {
   );
 }
 
-// ── Hero live preview ────────────────────────────────────────────────────────
-
-function HeroPreview({ hero, storeName }) {
-  const op = Math.max(0, Math.min(100, Number(hero.opacity) || 0)) / 100;
-  const usingImage = hero.background === 'image' && hero.backgroundImage;
-  const style = usingImage
-    ? { backgroundImage: `url(${hero.backgroundImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-    : hero.background === 'solid'
-      ? { background: hexAlpha(hero.startColor, op) }
-      : { background: `linear-gradient(135deg, ${hexAlpha(hero.startColor, op)}, ${hexAlpha(hero.endColor, op)})` };
-
-  const align =
-    hero.alignment === 'left'
-      ? 'items-start text-left'
-      : hero.alignment === 'right'
-        ? 'items-end text-right'
-        : 'items-center text-center';
-
+function ColorField({ label, value, onChange }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-line bg-[#0d0d10]">
-      <div className={cn('flex min-h-[210px] flex-col justify-center gap-2.5 p-8', align)} style={style}>
-        {hero.storeLogo ? (
-          <img src={hero.storeLogo} alt="" className="mb-1 h-8 object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
-        ) : null}
-        {hero.badge && (
-          <span className="rounded-full border border-white/20 bg-black/30 px-3 py-1 text-[11px] font-semibold text-white/90">
-            {hero.badge}
-          </span>
-        )}
-        <h3 className="bg-gradient-to-r from-indigo-300 to-sky-300 bg-clip-text text-2xl font-extrabold text-transparent">
-          {hero.headline || storeName || 'Your Store'}
-        </h3>
-        {hero.subtitle && <p className="max-w-md text-sm text-white/70">{hero.subtitle}</p>}
-        <div className={cn('mt-2 flex flex-wrap gap-2', hero.alignment === 'center' && 'justify-center')}>
-          <span className="rounded-full bg-white px-4 py-2 text-[13px] font-semibold text-black">
-            {hero.primaryCta || 'Browse deals'}
-          </span>
-          {hero.secondaryCta && (
-            <span className="rounded-full border border-white/30 px-4 py-2 text-[13px] font-semibold text-white">
-              {hero.secondaryCta}
-            </span>
-          )}
-        </div>
+    <div>
+      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-soft">{label}</p>
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-9 w-9 flex-none cursor-pointer rounded-lg border border-line bg-surface p-1"
+          aria-label={label}
+        />
+        <Input value={value} onChange={(e) => onChange(e.target.value)} className="font-mono" />
       </div>
     </div>
   );
 }
 
-// ── The full form ────────────────────────────────────────────────────────────
+/** How the widget will introduce itself to visitors. */
+function WidgetPreview({ image, name, role, description, widget }) {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-line" style={widgetBackground(widget)}>
+      <div className="flex flex-col items-center gap-3 px-6 py-8 text-center">
+        <span className="relative flex h-20 w-20 flex-none items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-indigo-500/40 to-fuchsia-500/30 ring-1 ring-white/20">
+          {image ? (
+            <img
+              src={image}
+              alt=""
+              className="h-full w-full object-cover"
+              onError={(e) => (e.currentTarget.style.display = 'none')}
+            />
+          ) : (
+            <Sparkles className="h-8 w-8 text-white" />
+          )}
+          <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-[#0b0b14] bg-emerald-400" />
+        </span>
+        <div>
+          <p className="text-[17px] font-bold uppercase tracking-tight text-white">{name || 'Your agent'}</p>
+          {role && (
+            <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.2em] text-amber-300/90">{role}</p>
+          )}
+          {description ? (
+            <p className="mx-auto mt-1.5 max-w-sm text-[13px] leading-relaxed text-white/60">{description}</p>
+          ) : (
+            <p className="mt-1.5 text-[13px] italic text-white/30">Add a short description…</p>
+          )}
+        </div>
+        <span className="mt-1 rounded-full bg-white/10 px-4 py-2 text-[12px] font-semibold text-white/70">
+          Type your reply…
+        </span>
+      </div>
+    </div>
+  );
+}
 
-const SOCIALS = [
-  ['facebook', 'Facebook URL'],
-  ['instagram', 'Instagram URL'],
-  ['twitter', 'Twitter URL'],
-  ['linkedin', 'Linkedin URL'],
-  ['youtube', 'Youtube URL'],
-  ['tiktok', 'Tiktok URL'],
-];
-
+/**
+ * Settings for the public agent page — which is just the chat/call widget.
+ */
 export function PageSettingsForm({ value, onChange, storeName }) {
-  const v = value;
-  // Patch a whole section, or a single field within a section.
-  const setSection = (key, patch) => onChange({ ...v, [key]: { ...v[key], ...patch } });
-  const hero = v.hero;
-  const setHero = (patch) => setSection('hero', patch);
+  const w = value.chatWidget;
+  const setWidget = (patch) => onChange({ ...value, chatWidget: { ...w, ...patch } });
 
   return (
-    <div className="space-y-5">
-      {/* HERO */}
-      <SectionShell
-        icon={ImageIcon}
-        title="Hero Section"
-        enabled={hero.enabled}
-        onToggle={(on) => setHero({ enabled: on })}
-      >
-        <Field label="Store Logo" hint="Shown in your store's top navigation bar. Leave empty to use your brand logo.">
-          <BrowseInput value={hero.storeLogo} onChange={(x) => setHero({ storeLogo: x })} placeholder="https://example.com/logo.png" />
-        </Field>
-
-        <Field label="Hero Side Image" hint="A feature image shown beside your hero headline (e.g. a product shot or illustration).">
-          <BrowseInput value={hero.heroSideImage} onChange={(x) => setHero({ heroSideImage: x })} placeholder="https://example.com/hero-visual.png" />
-        </Field>
-
-        <Segmented
-          options={[
-            { label: 'Left', value: 'left' },
-            { label: 'Center', value: 'center' },
-            { label: 'Right', value: 'right' },
-          ]}
-          value={hero.alignment}
-          onChange={(x) => setHero({ alignment: x })}
-        />
-
-        <Field label="Badge">
-          <Input value={hero.badge} onChange={(e) => setHero({ badge: e.target.value })} placeholder="The Future of SaaS Ownership" />
-        </Field>
-
-        <Field label="Headline & Subtitle">
-          <div className="space-y-2.5">
-            <Input value={hero.headline} onChange={(e) => setHero({ headline: e.target.value })} placeholder="Welcome to our marketplace" />
-            <Input value={hero.subtitle} onChange={(e) => setHero({ subtitle: e.target.value })} placeholder="Discover amazing software deals" />
-          </div>
-        </Field>
-
-        <Field label="CTA Buttons" hint="The secondary (outlined) button only shows on the full-image hero.">
-          <div className="space-y-2.5">
-            <Input value={hero.primaryCta} onChange={(e) => setHero({ primaryCta: e.target.value })} placeholder="Primary button (e.g. Connect Wallet)" />
-            <Input value={hero.secondaryCta} onChange={(e) => setHero({ secondaryCta: e.target.value })} placeholder="Secondary button — outlined (e.g. Whitelist Now)" />
-          </div>
-        </Field>
-
-        <Field label="Background">
-          <Segmented
-            options={[
-              { label: 'Gradient', value: 'gradient' },
-              { label: 'Solid Color', value: 'solid' },
-              { label: 'Image', value: 'image' },
-            ]}
-            value={hero.background}
-            onChange={(x) => setHero({ background: x })}
-          />
-        </Field>
-
-        {hero.background === 'image' ? (
-          <BrowseInput value={hero.backgroundImage} onChange={(x) => setHero({ backgroundImage: x })} placeholder="https://example.com/background.jpg" />
-        ) : (
-          <div className={cn('grid gap-4', hero.background === 'gradient' ? 'sm:grid-cols-2' : 'sm:grid-cols-1')}>
-            <ColorField label="Start Color" value={hero.startColor} onChange={(x) => setHero({ startColor: x })} />
-            {hero.background === 'gradient' && (
-              <ColorField label="End Color" value={hero.endColor} onChange={(x) => setHero({ endColor: x })} />
-            )}
-          </div>
-        )}
-
-        <Field>
-          <div className="mb-1.5 flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-soft">Background Opacity</span>
-            <span className="text-[13px] font-semibold text-primary">{hero.opacity}%</span>
-          </div>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={hero.opacity}
-            onChange={(e) => setHero({ opacity: Number(e.target.value) })}
-            className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-line accent-white"
-          />
-        </Field>
-
-        <Field label="Live Preview">
-          <HeroPreview hero={hero} storeName={storeName} />
-        </Field>
-      </SectionShell>
-
-      {/* PRODUCT SECTIONS */}
-      <SectionShell
-        icon={Package}
-        title="Product Sections"
-        enabled={v.products.enabled}
-        onToggle={(on) => setSection('products', { enabled: on })}
-      >
-        <Field label="Section Title">
-          <Input value={v.products.title} onChange={(e) => setSection('products', { title: e.target.value })} placeholder="Featured Deals" />
-        </Field>
-      </SectionShell>
-
-      {/* TOGGLE-ONLY SECTIONS */}
-      <SectionShell icon={MessageSquare} title="Testimonials" enabled={v.testimonials.enabled} onToggle={(on) => setSection('testimonials', { enabled: on })} />
-      <SectionShell icon={HelpCircle} title="FAQ Section" enabled={v.faq.enabled} onToggle={(on) => setSection('faq', { enabled: on })} />
-      <SectionShell icon={Layers} title="Custom Section Boxes" enabled={v.customBoxes.enabled} onToggle={(on) => setSection('customBoxes', { enabled: on })} />
-      <SectionShell icon={ImagePlus} title="Custom Banner" enabled={v.customBanner.enabled} onToggle={(on) => setSection('customBanner', { enabled: on })} />
-      <SectionShell icon={ShieldCheck} title="Trust & Policy Badges" enabled={v.trustBadges.enabled} onToggle={(on) => setSection('trustBadges', { enabled: on })} />
-
-      {/* FOOTER */}
-      <SectionShell
-        icon={PanelBottom}
-        title="Footer"
-        enabled={v.footer.enabled}
-        onToggle={(on) => setSection('footer', { enabled: on })}
-      >
-        <Field label="Footer Text">
-          <Textarea
-            value={v.footer.text}
-            onChange={(e) => setSection('footer', { text: e.target.value })}
-            className="min-h-[80px]"
-            placeholder="© 2025 Your Store. All rights reserved."
-          />
-        </Field>
-
-        <Field label="Footer Logo (optional — falls back to store logo)">
-          <BrowseInput value={v.footer.logo} onChange={(x) => setSection('footer', { logo: x })} placeholder="https://…" />
-        </Field>
-
-        <Field label="Social Media Links">
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-            {SOCIALS.map(([key, ph]) => (
-              <Input
-                key={key}
-                value={v.footer.social[key]}
-                onChange={(e) => setSection('footer', { social: { ...v.footer.social, [key]: e.target.value } })}
-                placeholder={ph}
-              />
-            ))}
-          </div>
-        </Field>
-
-        <div className="flex items-center justify-between border-t border-line/70 pt-4">
-          <p className="text-[12px] text-ink-soft">Add custom pages (Privacy, Terms…) as footer links.</p>
-          <Button type="button" variant="secondary" size="sm">
-            <FileText className="h-4 w-4" />
-            Add Custom Page
-          </Button>
+    <Card className="overflow-hidden">
+      <div className="flex items-center gap-3 px-5 py-4 sm:px-6">
+        <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-white/[0.06] text-ink-soft">
+          <Bot className="h-5 w-5" />
+        </span>
+        <div>
+          <p className="text-card-title font-semibold text-ink">Chat Widget</p>
+          <p className="text-[12px] text-ink-soft">What visitors see when they open your agent</p>
         </div>
-      </SectionShell>
+      </div>
 
-      {/* CUSTOM CODE */}
-      <SectionShell icon={Code2} title="Custom Code (Pixels & Scripts)" subtitle="FB / Google pixel, analytics, verification tags">
-        <div className="flex items-start gap-2.5 rounded-xl border border-warning/30 bg-warning/[0.07] px-4 py-3">
-          <AlertTriangle className="mt-0.5 h-4 w-4 flex-none text-warning" />
-          <p className="text-[12.5px] text-ink-soft">
-            Paste tracking pixels, analytics, or verification snippets. This code runs on your public
-            store — only add code from sources you trust.
-          </p>
-        </div>
-
-        <Field label="Head Code (e.g. Meta / Google Pixel, GA, verification)">
-          <Textarea
-            value={v.customCode.headCode}
-            onChange={(e) => setSection('customCode', { headCode: e.target.value })}
-            className="min-h-[120px] font-mono text-[12.5px]"
-            placeholder={'<!-- Meta Pixel, Google Analytics, etc. -->\n<script>...</script>'}
+      <div className="space-y-5 border-t border-line/70 px-5 py-5 sm:px-6">
+        <Field
+          label="Agent Image"
+          hint="Shown at the top of the chat and on the launcher button. Browse to upload any photo (it's resized automatically), or paste a direct image link ending in .png / .jpg. Leave empty for the default avatar."
+        >
+          <BrowseInput
+            value={w.image}
+            onChange={(x) => setWidget({ image: x })}
+            placeholder="https://example.com/agent.png"
           />
         </Field>
 
-        <Field label="Body Code (loads at end of page — chat widgets, etc.)">
-          <Textarea
-            value={v.customCode.bodyCode}
-            onChange={(e) => setSection('customCode', { bodyCode: e.target.value })}
-            className="min-h-[120px] font-mono text-[12.5px]"
-            placeholder={'<!-- Chat widget, noscript pixel, etc. -->'}
+        <Field label="Agent Name" hint="Leave empty to use the agent's own name.">
+          <Input
+            value={w.name}
+            onChange={(e) => setWidget({ name: e.target.value })}
+            placeholder={storeName || 'e.g. Krishna Buses Assistant'}
           />
         </Field>
-      </SectionShell>
-    </div>
+
+        <Field label="Role" hint="The small line under the name — e.g. “BOOKING ASSISTANT”. Optional.">
+          <Input
+            value={w.role}
+            onChange={(e) => setWidget({ role: e.target.value })}
+            placeholder="e.g. Booking Assistant"
+          />
+        </Field>
+
+        <Field
+          label="Agent Description"
+          hint="One or two lines telling visitors what this agent can help with."
+        >
+          <Textarea
+            value={w.description}
+            onChange={(e) => setWidget({ description: e.target.value })}
+            className={cn('min-h-[80px]')}
+            placeholder="e.g. I can check bus timings, book tickets and answer questions about your trip."
+          />
+        </Field>
+
+        <Field label="Background Gradient" hint="Used on the welcome screen and behind the chat.">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <ColorField label="Start colour" value={w.bgStart} onChange={(x) => setWidget({ bgStart: x })} />
+            <ColorField label="End colour" value={w.bgEnd} onChange={(x) => setWidget({ bgEnd: x })} />
+          </div>
+        </Field>
+
+        {/* Chat button */}
+        <Field label="Chat Button">
+          <div className="space-y-3">
+            <Input
+              value={w.ctaLabel}
+              onChange={(e) => setWidget({ ctaLabel: e.target.value })}
+              placeholder="Start the conversation"
+            />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <ColorField label="Gradient from" value={w.ctaFrom} onChange={(x) => setWidget({ ctaFrom: x })} />
+              <ColorField label="Gradient to" value={w.ctaTo} onChange={(x) => setWidget({ ctaTo: x })} />
+            </div>
+            <div
+              style={ctaStyle(w)}
+              className="flex items-center justify-center rounded-full px-6 py-3 text-[14px] font-bold text-white"
+            >
+              {w.ctaLabel || 'Start the conversation'}
+            </div>
+          </div>
+        </Field>
+
+        {/* Voice-call button */}
+        <Field label="Voice Call Button" hint="Also used for the phone button inside the chat.">
+          <div className="space-y-3">
+            <Input
+              value={w.callLabel}
+              onChange={(e) => setWidget({ callLabel: e.target.value })}
+              placeholder="Start a voice call"
+            />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <ColorField label="Gradient from" value={w.callFrom} onChange={(x) => setWidget({ callFrom: x })} />
+              <ColorField label="Gradient to" value={w.callTo} onChange={(x) => setWidget({ callTo: x })} />
+            </div>
+            <div
+              style={callStyle(w)}
+              className="flex items-center justify-center rounded-full px-6 py-3 text-[14px] font-bold text-white"
+            >
+              {w.callLabel || 'Start a voice call'}
+            </div>
+          </div>
+        </Field>
+
+        <Field label="Preview">
+          <WidgetPreview
+            image={w.image}
+            name={w.name || storeName}
+            role={w.role}
+            description={w.description}
+            widget={w}
+          />
+        </Field>
+      </div>
+    </Card>
   );
 }

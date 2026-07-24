@@ -128,6 +128,15 @@ export function useVapiCall(options = {}) {
         setStatus('error');
         return;
       }
+      // Vapi assistant ids are UUIDs. A non-UUID means the agent was saved
+      // before the Vapi key was configured, so it points at a placeholder id.
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(assistantId)) {
+        setErrorMessage(
+          'This agent isn’t linked to a real Vapi assistant (its saved id is a placeholder). Re-create the agent, or repair its assistant id.'
+        );
+        setStatus('error');
+        return;
+      }
       setErrorMessage('');
       setStatus('connecting');
 

@@ -1,7 +1,8 @@
 import { api, unwrap } from './api.js';
 
 export const agentBuilderService = {
-  start: () => unwrap(api.post('/agent-builder/start')),
+  /** Pass a draftId to resume that exact draft; omit it to begin a new agent. */
+  start: (draftId) => unwrap(api.post('/agent-builder/start', draftId ? { draftId } : {})),
   sendMessage: (payload) => unwrap(api.post('/agent-builder/message', payload)),
   getVoices: () => unwrap(api.get('/agent-builder/voices')),
   getFlow: () => unwrap(api.get('/agent-builder/flow')),

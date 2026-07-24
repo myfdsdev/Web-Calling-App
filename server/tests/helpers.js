@@ -66,13 +66,16 @@ export async function completeDraft(user) {
   await send({ message: 'Emma' }); // 1 name
   await send({ message: 'Green Valley Real Estate' }); // 2 business
   await send({ value: 'Real Estate' }); // 3 type
-  await send({ value: 'Appointment Booking' }); // 4 purpose
-  await send({ message: 'Property buying\nRentals\nSite visits' }); // 5 services
-  await send({ values: ['Friendly', 'Professional'] }); // 6 tone
-  await send({ value: 'English and Hindi' }); // 7 language
-  await send({ message: 'Hello, thanks for calling Green Valley Real Estate. This is Emma.' }); // 8 greeting
-  await send({ value: 'Collect the caller name and contact details so the team can follow up.' }); // 9 escalation
-  const last = await send({ voiceId: 'ava' }); // 10 voice
+  await send({ message: 'Jaipur, Rajasthan' }); // 4 location
+  await send({ value: 'Appointment Booking' }); // 5 purpose
+  await send({ message: 'Property buying\nRentals\nSite visits' }); // 6 services
+  await send({ values: ['Friendly', 'Professional'] }); // 7 tone
+  await send({ value: 'English and Hindi' }); // 8 language
+  await send({ message: 'Hello, thanks for calling Green Valley Real Estate. This is Emma.' }); // 9 greeting
+  // 10 escalation — the voice is chosen automatically, there is no voice step.
+  const last = await send({
+    value: 'Collect the caller name and contact details so the team can follow up.',
+  });
 
   return { draftId, body: last.body };
 }

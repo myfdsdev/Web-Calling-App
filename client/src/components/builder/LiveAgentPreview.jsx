@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Building2, Target, Sparkles, Languages, Mic, MessageSquare } from 'lucide-react';
+import { Building2, MapPin, Target, Sparkles, Languages, Mic, MessageSquare } from 'lucide-react';
 import { AgentAvatar } from '../ui/Avatar.jsx';
 import { Badge } from '../ui/Badge.jsx';
 import { CircularProgress } from '../ui/ProgressBar.jsx';
@@ -82,6 +82,7 @@ export function LiveAgentPreview({ draft, progress }) {
       {/* Details */}
       <div className="divide-y divide-line/70 px-5 py-1">
         <Row icon={Building2} label="Business" value={draft?.businessName} />
+        <Row icon={MapPin} label="Location" value={draft?.businessLocation} />
         <Row icon={Target} label="Purpose" value={draft?.agentPurpose} />
         <Row icon={Sparkles} label="Tone" value={draft?.tone} />
         <Row icon={Languages} label="Language" value={draft?.languages} />

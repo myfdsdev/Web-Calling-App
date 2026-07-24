@@ -1,5 +1,13 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import { DEFAULT_PLAN_ID, getPlan } from '../config/plans.js';
+
+/** First renewal date — one month from now. */
+function nextRenewal(from = new Date()) {
+  const d = new Date(from);
+  d.setMonth(d.getMonth() + 1);
+  return d;
+}
 
 const userSchema = new mongoose.Schema(
   {
@@ -13,6 +21,15 @@ const userSchema = new mongoose.Schema(
       index: true,
     },
     passwordHash: { type: String, required: true, select: false },
+
+    // ── Plan + credits ──────────────────────────────────────────────────────
+    plan: { type: String, default: DEFAULT_PLAN_ID, index: true },
+    // Credits from the monthly allowance (reset each cycle).
+    credits: { type: Number, default: () => getPlan(DEFAULT_PLAN_ID).credits, min: 0 },
+    // Purchased top-up credits — never reset, spent only after `credits` runs out.
+    bonusCredits: { type: Number, default: 0, min: 0 },
+    creditsRenewAt: { type: Date, default: () => nextRenewal() },
+    planUpdatedAt: { type: Date, default: Date.now },
   },
   { timestamps: true }
 );
@@ -26,7 +43,15 @@ userSchema.methods.verifyPassword = function verifyPassword(plain) {
 };
 
 userSchema.methods.toPublic = function toPublic() {
-  return { id: this._id.toString(), name: this.name, email: this.email };
+  return {
+    id: this._id.toString(),
+    name: this.name,
+    email: this.email,
+    plan: this.plan,
+    credits: (this.credits || 0) + (this.bonusCredits || 0),
+  };
 };
+
+export { nextRenewal };
 
 export const User = mongoose.model('User', userSchema);

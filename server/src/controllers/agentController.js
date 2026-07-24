@@ -4,6 +4,8 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { updateAgentSchema, publicChatSchema, callLeadSchema } from '../validators/agentValidator.js';
 import { chatWithAgent } from '../services/agentChatService.js';
 import { captureChatLead, captureCallLead } from '../services/leadService.js';
+import { CHAT_CREDITS_PER_MESSAGE, VOICE_CREDITS_PER_MINUTE } from '../config/plans.js';
+import { canAfford, spend } from '../services/creditService.js';
 import { SUPPORTED_VOICES, getVoiceById } from '../config/voices.js';
 import { buildSystemPrompt } from '../services/agentPromptService.js';
 import { generateSystemPrompt } from '../services/geminiAgentBuilderService.js';
@@ -71,6 +73,7 @@ export const updateAgent = asyncHandler(async (req, res) => {
     'name',
     'businessName',
     'businessType',
+    'businessLocation',
     'purpose',
     'services',
     'tone',
@@ -86,6 +89,7 @@ export const updateAgent = asyncHandler(async (req, res) => {
     name: 'name',
     businessName: 'businessName',
     businessType: 'businessType',
+    businessLocation: 'businessLocation',
     purpose: 'purpose',
     services: 'services',
     tone: 'tone',
@@ -141,6 +145,7 @@ export const updateAgent = asyncHandler(async (req, res) => {
         agentName: agent.name,
         businessName: agent.businessName,
         businessType: agent.businessType,
+        businessLocation: agent.businessLocation,
         agentPurpose: agent.purpose,
         services: agent.services,
         tone: agent.tone,
@@ -177,9 +182,12 @@ export const getPublicAgent = asyncHandler(async (req, res) => {
   if (!agent || !agent.isPublic || agent.status === 'disabled') {
     throw new AppError('This voice agent is not available.', 404, 'AGENT_NOT_AVAILABLE');
   }
+  // Voice calls are only offered while the owner can afford at least a minute.
+  const callsEnabled = await canAfford(agent.userId, VOICE_CREDITS_PER_MINUTE);
   return ok(res, {
     agent: agent.toPublicView(),
     vapiPublicKey: env.vapi.publicKey || '',
+    callsEnabled,
   });
 });
 
@@ -194,7 +202,23 @@ export const publicChat = asyncHandler(async (req, res) => {
     throw new AppError('This voice agent is not available.', 404, 'AGENT_NOT_AVAILABLE');
   }
   const { messages, sessionId } = publicChatSchema.parse(req.body);
+
+  // Out of credits: still record the lead (the visitor engaged), but don't
+  // spend money generating a reply.
+  if (!(await canAfford(agent.userId, CHAT_CREDITS_PER_MESSAGE))) {
+    await captureChatLead({ agent, sessionId, messages });
+    return ok(res, {
+      reply: "Thanks for reaching out! I'm unavailable right now — please leave your details and the team will follow up.",
+      unavailable: true,
+    });
+  }
+
   const reply = await chatWithAgent(agent, messages);
+  await spend(agent.userId, CHAT_CREDITS_PER_MESSAGE, {
+    source: 'chat',
+    reason: 'Chat reply',
+    agentId: agent._id,
+  });
   // Capture / update the lead for this chat session (never blocks the reply).
   await captureChatLead({ agent, sessionId, messages: [...messages, { role: 'assistant', content: reply }] });
   return ok(res, { reply });

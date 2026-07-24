@@ -123,7 +123,6 @@ export default function CreateAgentPage() {
           manualMode ? (
             <div className="mt-6">
               <ManualAgentForm
-                voices={builder.voices}
                 submitting={manualSubmitting}
                 onSubmit={handleManualSubmit}
                 onSwitchToChat={() => setManualMode(false)}

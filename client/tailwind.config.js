@@ -39,6 +39,9 @@ export default {
           'Roboto',
           'sans-serif',
         ],
+        // Public agent page only — never applied to the dashboard.
+        kalam: ['Kalam', 'ui-rounded', 'cursive'],
+        prompt: ['Prompt', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       fontSize: {
         'page-title': ['32px', { lineHeight: '1.2', letterSpacing: '-0.02em', fontWeight: '700' }],

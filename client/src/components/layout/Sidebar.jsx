@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   Bot,
   Users,
+  Zap,
   Plus,
   Search,
   ChevronsUpDown,
@@ -15,11 +16,13 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/cn.js';
 import { useAuthStore } from '../../stores/authStore.js';
+import { useMyBilling } from '../../hooks/useBilling.js';
 
 const NAV = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/agents', label: 'Agents', icon: Bot, end: false },
   { to: '/leads', label: 'Leads', icon: Users, end: false },
+  { to: '/billing', label: 'Plans & Credits', icon: Zap, end: false },
 ];
 
 function Logo() {
@@ -117,6 +120,39 @@ function WorkspacePill() {
   );
 }
 
+/** Live credit balance — turns amber when the user is nearly out. */
+function CreditChip({ onNavigate }) {
+  const { data } = useMyBilling();
+  if (!data?.credits) return null;
+
+  const total = data.credits.total ?? 0;
+  const minutes = Math.floor(total / (data.rates?.voiceCreditsPerMinute || 10));
+  const low = total < (data.rates?.voiceCreditsPerMinute || 10) * 5; // under ~5 minutes
+
+  return (
+    <Link
+      to="/billing"
+      onClick={onNavigate}
+      className={cn(
+        'flex items-center gap-2.5 rounded-lg border px-2.5 py-2 transition-colors',
+        low
+          ? 'border-warning/30 bg-warning/[0.08] hover:bg-warning/[0.12]'
+          : 'border-line hover:bg-white/[0.04]'
+      )}
+    >
+      <Zap className={cn('h-4 w-4 flex-none', low ? 'text-warning' : 'text-primary')} />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[13px] font-semibold text-ink">
+          {new Intl.NumberFormat().format(total)} credits
+        </p>
+        <p className="truncate text-[11px] text-ink-soft">
+          {data.plan?.name} · ~{minutes} min left
+        </p>
+      </div>
+    </Link>
+  );
+}
+
 function SectionLabel({ children }) {
   return (
     <p className="px-2.5 pb-1.5 pt-3 text-[11px] font-semibold uppercase tracking-wider text-ink-faint">
@@ -161,6 +197,10 @@ function SidebarContent({ onNavigate }) {
 
         <SectionLabel>Create</SectionLabel>
         <NavItem to="/agents/create" label="New Agent" icon={Plus} onNavigate={onNavigate} />
+
+        <div className="mt-4">
+          <CreditChip onNavigate={onNavigate} />
+        </div>
       </nav>
 
       {/* Footer */}

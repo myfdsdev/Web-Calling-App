@@ -5,6 +5,30 @@ import { agentBuilderService } from '../services/agentBuilderService.js';
 const uid = () => `local_${Math.random().toString(36).slice(2)}_${performance.now().toString(36)}`;
 
 /**
+ * Which draft this tab is currently building.
+ *
+ * Held in sessionStorage so a page REFRESH resumes the same conversation, while
+ * navigating away (React unmount runs, a refresh doesn't) clears it — so the
+ * next visit to "Create Agent" always starts a brand-new agent.
+ */
+const ACTIVE_DRAFT_KEY = 'vox.activeDraftId';
+const readActiveDraft = () => {
+  try {
+    return sessionStorage.getItem(ACTIVE_DRAFT_KEY) || null;
+  } catch {
+    return null;
+  }
+};
+const writeActiveDraft = (id) => {
+  try {
+    if (id) sessionStorage.setItem(ACTIVE_DRAFT_KEY, id);
+    else sessionStorage.removeItem(ACTIVE_DRAFT_KEY);
+  } catch {
+    /* private mode — resume simply won't survive a refresh */
+  }
+};
+
+/**
  * Owns all conversational-builder state: messages, draft, progress, autosave
  * status and the transitions between chat → review → creating → created.
  */
@@ -47,13 +71,15 @@ export function useAgentBuilder() {
     setPhase('loading');
     try {
       const [startData, voiceData, flowData] = await Promise.all([
-        agentBuilderService.start(),
+        // Only resume when this tab was already mid-conversation (a refresh).
+        agentBuilderService.start(readActiveDraft()),
         agentBuilderService.getVoices().catch(() => ({ voices: [] })),
         agentBuilderService.getFlow().catch(() => ({ steps: [] })),
       ]);
       setVoices(voiceData.voices || []);
       setFlow(flowData.steps || []);
       setDraftId(startData.draftId);
+      writeActiveDraft(startData.draftId);
       setResumed(Boolean(startData.resumed));
       setDraft(startData.draft);
       setProgress(startData.progress);
@@ -77,7 +103,12 @@ export function useAgentBuilder() {
 
   useEffect(() => {
     init();
-    return () => clearTimeout(savedTimer.current);
+    return () => {
+      clearTimeout(savedTimer.current);
+      // Leaving the builder (SPA navigation) ends this attempt, so the next
+      // visit starts fresh. A page refresh doesn't run this, so F5 resumes.
+      writeActiveDraft(null);
+    };
   }, [init]);
 
   // ── Send an answer ─────────────────────────────────────────────────────
@@ -246,6 +277,7 @@ export function useAgentBuilder() {
     } catch {
       /* ignore — we're resetting regardless */
     }
+    writeActiveDraft(null); // the reload must not resume what we just deleted
     // A clean reload re-runs init(), which finds no draft and creates a fresh one.
     window.location.reload();
   }, [draftId]);

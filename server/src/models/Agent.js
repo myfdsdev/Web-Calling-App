@@ -8,6 +8,7 @@ const agentSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true },
     businessName: { type: String, default: '' },
     businessType: { type: String, default: '' },
+    businessLocation: { type: String, default: '' },
 
     // ── Public-facing appearance (shown on the shareable /a/:publicId page) ──
     publicId: { type: String, unique: true, sparse: true, default: () => genPublicId() },
@@ -74,6 +75,7 @@ agentSchema.methods.toJSONView = function toJSONView() {
     name: this.name,
     businessName: this.businessName,
     businessType: this.businessType,
+    businessLocation: this.businessLocation,
     purpose: this.purpose,
     services: this.services,
     tone: this.tone,

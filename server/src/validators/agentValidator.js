@@ -15,6 +15,7 @@ export const updateAgentSchema = z.object({
   name: z.string().min(1).max(80).optional(),
   businessName: z.string().max(120).optional(),
   businessType: z.string().max(80).optional(),
+  businessLocation: z.string().max(160).optional(),
   purpose: z.string().max(120).optional(),
   services: z.array(z.string().max(160)).max(30).optional(),
   tone: z.array(z.string()).max(3).optional(),
@@ -57,6 +58,10 @@ export const publicChatSchema = z.object({
 export const callLeadSchema = z.object({
   sessionId: z.string().max(80).optional(),
 });
+
+/** Billing: switch plan / buy a credit pack. */
+export const planChangeSchema = z.object({ planId: z.string().min(1).max(40) });
+export const topUpSchema = z.object({ packId: z.string().min(1).max(40) });
 
 /** Owner lead update. */
 export const leadUpdateSchema = z.object({

@@ -1,7 +1,8 @@
 import { AgentDraft } from '../models/AgentDraft.js';
 import { AgentBuilderMessage } from '../models/AgentBuilderMessage.js';
 import { AppError } from '../utils/apiResponse.js';
-import { computeCompletion, isReadyForReview, progressFor } from './builderFlow.js';
+import { computeCompletion, isReadyForReview, progressFor, pickVoiceForDraft } from './builderFlow.js';
+import { SUPPORTED_VOICES } from '../config/voices.js';
 
 /** Load a draft and assert it belongs to the given user. */
 export async function getOwnedDraft(draftId, userId) {
@@ -27,6 +28,15 @@ export async function addMessage(draft, userId, role, content, stepKey = '', str
 
 /** Recompute completion + review-readiness and persist the draft. */
 export async function recomputeAndSave(draft) {
+  // The user never picks a voice during setup — choose the best fit for the
+  // language/tone they've given so far. Re-evaluated until they reach review.
+  const voice = pickVoiceForDraft(draft, SUPPORTED_VOICES);
+  if (voice && draft.status === 'draft') {
+    draft.selectedVoiceProvider = voice.provider;
+    draft.selectedVoiceId = voice.voiceId;
+    draft.selectedVoiceName = voice.name;
+  }
+
   draft.completionPercentage = computeCompletion(draft);
   if (draft.status === 'draft' && isReadyForReview(draft)) {
     draft.status = 'ready-for-review';

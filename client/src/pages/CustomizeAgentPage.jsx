@@ -47,7 +47,7 @@ export default function CustomizeAgentPage() {
         id: agent.id,
         updates: { pageSettings, isPublic },
       });
-      toast.success(isPublic ? 'Saved — your public page is live.' : 'Page settings saved.');
+      toast.success(isPublic ? 'Saved — your public page is live.' : 'Changes saved.');
     } catch (err) {
       toast.error(err.normalizedMessage || 'Could not save page settings.');
     }
@@ -73,8 +73,10 @@ export default function CustomizeAgentPage() {
       </Link>
 
       <div className="mb-6">
-        <h1 className="text-[26px] font-bold tracking-tight text-ink md:text-[32px]">Page Settings</h1>
-        <p className="mt-1.5 text-sm text-ink-soft">Control which sections appear on your public page.</p>
+        <h1 className="text-[26px] font-bold tracking-tight text-ink md:text-[32px]">Customize</h1>
+        <p className="mt-1.5 text-sm text-ink-soft">
+          Set up how your agent introduces itself on its shareable page.
+        </p>
       </div>
 
       {/* Publish + share */}
@@ -126,7 +128,7 @@ export default function CustomizeAgentPage() {
         </Button>
         <Button onClick={onSave} loading={updateAgent.isPending}>
           <Save className="h-4 w-4" />
-          Save Page Settings
+          Save changes
         </Button>
       </div>
     </PageContainer>
