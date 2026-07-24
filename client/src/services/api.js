@@ -25,7 +25,10 @@ api.interceptors.response.use(
   (res) => res,
   (error) => {
     const data = error.response?.data;
-    const message = data?.message || error.message || 'Something went wrong.';
+    // In dev the API attaches `detail` (the real error) to 500s — surface it so
+    // failures are diagnosable instead of a bare "status code 500".
+    const detail = import.meta.env.DEV && data?.detail ? ` — ${data.detail}` : '';
+    const message = (data?.message || error.message || 'Something went wrong.') + detail;
     const code = data?.code || 'ERROR';
     if (error.response?.status === 401 && ['SESSION_EXPIRED', 'UNAUTHENTICATED'].includes(code)) {
       setToken(null);

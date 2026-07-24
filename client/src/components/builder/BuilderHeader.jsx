@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Loader2, AlertCircle, X } from 'lucide-react';
+import { Check, Loader2, AlertCircle, X, RotateCcw } from 'lucide-react';
 import { Button } from '../ui/Button.jsx';
 
 function SaveStatus({ state }) {
@@ -27,7 +27,7 @@ function SaveStatus({ state }) {
   );
 }
 
-export function BuilderHeader({ saveState, onExit }) {
+export function BuilderHeader({ saveState, onExit, onStartOver }) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div>
@@ -36,8 +36,14 @@ export function BuilderHeader({ saveState, onExit }) {
         </h1>
         <p className="mt-1 text-sm text-ink-soft">Build your agent through a guided conversation.</p>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         <SaveStatus state={saveState} />
+        {onStartOver && (
+          <Button variant="ghost" size="sm" onClick={onStartOver}>
+            <RotateCcw className="h-4 w-4" />
+            Start over
+          </Button>
+        )}
         <Button variant="ghost" size="sm" onClick={onExit}>
           <X className="h-4 w-4" />
           Exit Setup

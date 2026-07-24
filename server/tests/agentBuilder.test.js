@@ -112,6 +112,31 @@ describe('Agent Builder conversational flow', () => {
     expect(res.body.data.draft.currentStep).toBe(11); // stays at review, no "Invalid step"
   });
 
+  it('pre-fills draft fields from the welcome popup (use case / template)', async () => {
+    const user = await makeUser();
+    const start = await user.bearer(request(app).post('/api/agent-builder/start'));
+    const draftId = start.body.data.draftId;
+
+    // Free-text use case → purpose only.
+    const useCase = await user
+      .bearer(request(app).patch(`/api/agent-builder/drafts/${draftId}`))
+      .send({ agentPurpose: 'krishna' });
+    expect(useCase.status).toBe(200);
+    expect(useCase.body.data.draft.agentPurpose).toBe('krishna');
+
+    // Template → purpose + tone + services in one patch.
+    const template = await user
+      .bearer(request(app).patch(`/api/agent-builder/drafts/${draftId}`))
+      .send({
+        agentPurpose: 'Customer Support',
+        tone: ['Friendly', 'Professional', 'Calm'],
+        services: ['Answer product questions', 'Handle complaints'],
+      });
+    expect(template.status).toBe(200);
+    expect(template.body.data.draft.tone).toEqual(['Friendly', 'Professional', 'Calm']);
+    expect(template.body.data.draft.currentStep).toBe(1); // pre-fill never advances the flow
+  });
+
   it('exposes the supported voices and never invents ids', async () => {
     const user = await makeUser();
     const res = await user.bearer(request(app).get('/api/agent-builder/voices'));

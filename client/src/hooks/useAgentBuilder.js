@@ -239,6 +239,17 @@ export function useAgentBuilder() {
     [draftId, flashSaved]
   );
 
+  // ── Discard the current draft and begin a brand-new one ───────────────
+  const startOver = useCallback(async () => {
+    try {
+      if (draftId) await agentBuilderService.deleteDraft(draftId);
+    } catch {
+      /* ignore — we're resetting regardless */
+    }
+    // A clean reload re-runs init(), which finds no draft and creates a fresh one.
+    window.location.reload();
+  }, [draftId]);
+
   // ── Create the real Vapi agent ─────────────────────────────────────────
   const createAgent = useCallback(async () => {
     if (!draftId) return null;
@@ -282,6 +293,7 @@ export function useAgentBuilder() {
     editStep,
     patchDraft,
     submitManualDraft,
+    startOver,
     createAgent,
   };
 }
