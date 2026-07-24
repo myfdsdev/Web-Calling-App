@@ -1,17 +1,7 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Sparkles,
-  X,
-  Volume2,
-  VolumeX,
-  Phone,
-  PhoneOff,
-  ArrowUp,
-  Loader2,
-  RotateCcw,
-} from 'lucide-react';
+import { Sparkles, X, Phone, PhoneOff, ArrowUp, Loader2, RotateCcw } from 'lucide-react';
 import { publicService } from '../../services/vapiService.js';
 import { useVapiCall } from '../../hooks/useVapiCall.js';
 import { CallWaveform } from '../calling/CallWaveform.jsx';
@@ -189,7 +179,6 @@ export function ChatWidget({
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
-  const [ttsMuted, setTtsMuted] = useState(false);
   // One id per visitor session — groups all chat + call activity into one lead.
   const sessionRef = useRef(`s_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`);
   const callLeadSent = useRef(false);
@@ -203,26 +192,10 @@ export function ChatWidget({
 
   const greeting = agent.firstMessage || `Hey, I'm ${agent.name} — how can I help you today?`;
 
-  const speak = useCallback(
-    (text) => {
-      if (ttsMuted || typeof window === 'undefined' || !window.speechSynthesis) return;
-      try {
-        window.speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(text);
-        u.rate = 1.02;
-        window.speechSynthesis.speak(u);
-      } catch {
-        /* ignore */
-      }
-    },
-    [ttsMuted]
-  );
-
   // Seed the greeting the first time the panel opens.
   useEffect(() => {
     if (open && messages.length === 0) {
       setMessages([{ id: uid(), role: 'assistant', content: greeting }]);
-      speak(greeting);
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -242,30 +215,13 @@ export function ChatWidget({
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, sending]);
 
-  const stopSpeaking = () => {
-    try {
-      window.speechSynthesis?.cancel();
-    } catch {
-      /* ignore */
-    }
-  };
-
-  const toggleTts = () => {
-    setTtsMuted((m) => {
-      if (!m) stopSpeaking();
-      return !m;
-    });
-  };
-
   const closePanel = () => {
     if (inCall) call.stop();
     call.reset();
-    stopSpeaking();
     setOpen(false);
   };
 
   const restart = () => {
-    stopSpeaking();
     setMessages([{ id: uid(), role: 'assistant', content: greeting }]);
     setInput('');
   };
@@ -285,7 +241,6 @@ export function ChatWidget({
       );
       const answer = reply || "Sorry, I couldn't respond just now.";
       setMessages((m) => [...m, { id: uid(), role: 'assistant', content: answer }]);
-      speak(answer);
     } catch {
       setMessages((m) => [
         ...m,
@@ -305,7 +260,6 @@ export function ChatWidget({
   };
 
   const startCall = () => {
-    stopSpeaking();
     // Generate a lead as soon as the visitor initiates a call (once per session).
     if (!callLeadSent.current) {
       callLeadSent.current = true;
@@ -359,13 +313,6 @@ export function ChatWidget({
                       <RotateCcw className="h-5 w-5" />
                     </button>
                   )}
-                  <button
-                    onClick={toggleTts}
-                    aria-label={ttsMuted ? 'Unmute voice' : 'Mute voice'}
-                    className="flex h-9 w-9 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-                  >
-                    {ttsMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-                  </button>
                   <button
                     onClick={closePanel}
                     aria-label="Close chat"

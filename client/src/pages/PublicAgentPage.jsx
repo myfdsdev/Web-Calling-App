@@ -45,8 +45,8 @@ export default function PublicAgentPage() {
   const agent = data.agent;
   const w = withPageDefaults(agent.pageSettings).chatWidget;
   const image = w.image || agent.avatarUrl || '';
-  const name = w.name || agent.name;
   const role = w.role || '';
+  const name = w.name || agent.name;
   const welcome =
     w.description || agent.tagline || agent.bio || agent.firstMessage || `Hi! I'm ${name}. How can I help?`;
   const cta = w.ctaLabel || 'Start the conversation';
@@ -83,7 +83,7 @@ export default function PublicAgentPage() {
         </div>
 
         <div className="mt-8">
-          <h1 className="font-kalam text-4xl font-bold uppercase tracking-tight sm:text-5xl">
+          <h1 className="font-kalam text-[28px] font-bold uppercase tracking-tight sm:text-[34px]">
             {name}
           </h1>
           {role && (
@@ -93,12 +93,12 @@ export default function PublicAgentPage() {
           )}
         </div>
 
-        <p className="mx-auto mt-[88px] max-w-xl font-prompt text-[17px] leading-relaxed text-white/75 sm:text-lg">
+        <p className="mx-auto mt-[52px] max-w-xl font-prompt text-[17px] font-extralight leading-relaxed text-white/80 sm:text-lg">
           {welcome}
         </p>
 
         {/* Equal-width actions so the pair reads as one balanced row */}
-        <div className="mt-[104px] flex w-full flex-col items-stretch gap-3.5 sm:w-auto sm:flex-row sm:items-center sm:gap-5">
+        <div className="mt-[64px] flex w-full flex-col items-stretch gap-3.5 sm:w-auto sm:flex-row sm:items-center sm:gap-5">
           <motion.button
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.98 }}
