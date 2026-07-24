@@ -7,6 +7,7 @@ import { publicService } from '../services/vapiService.js';
 import { ChatWidget, AgentFace } from '../components/public/ChatWidget.jsx';
 import { FullPageLoader } from '../components/common/FullPageLoader.jsx';
 import { withPageDefaults, widgetBackground, ctaStyle, callStyle } from '../utils/pageSettings.js';
+import { useDocumentMeta } from '../hooks/useDocumentMeta.js';
 
 function Unavailable() {
   return (
@@ -39,16 +40,26 @@ export default function PublicAgentPage() {
     retry: false,
   });
 
-  if (isLoading) return <FullPageLoader label="Loading…" />;
-  if (isError || !data?.agent) return <Unavailable />;
-
-  const agent = data.agent;
-  const w = withPageDefaults(agent.pageSettings).chatWidget;
-  const image = w.image || agent.avatarUrl || '';
+  // Derived before the early returns so the meta hook runs unconditionally.
+  const agent = data?.agent;
+  const w = withPageDefaults(agent?.pageSettings).chatWidget;
+  const image = w.image || agent?.avatarUrl || '';
   const role = w.role || '';
-  const name = w.name || agent.name;
+  const name = w.name || agent?.name || '';
   const welcome =
-    w.description || agent.tagline || agent.bio || agent.firstMessage || `Hi! I'm ${name}. How can I help?`;
+    w.description || agent?.tagline || agent?.bio || agent?.firstMessage || `Hi! I'm ${name}. How can I help?`;
+
+  useDocumentMeta({
+    title: name ? `${name} — Chat or call` : 'Voice agent',
+    description: welcome,
+    // A data-URL avatar is useless to crawlers, so only share hosted images.
+    image: image.startsWith('http') ? image : '',
+    url: typeof window !== 'undefined' ? window.location.href : '',
+  });
+
+  if (isLoading) return <FullPageLoader label="Loading…" />;
+  if (isError || !agent) return <Unavailable />;
+
   const cta = w.ctaLabel || 'Start the conversation';
   const callCta = w.callLabel || 'Start a voice call';
   const callsOn = data.callsEnabled !== false;
