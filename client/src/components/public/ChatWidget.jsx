@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, X, Phone, PhoneOff, ArrowUp, Loader2, RotateCcw } from 'lucide-react';
 import { publicService } from '../../services/vapiService.js';
 import { useVapiCall } from '../../hooks/useVapiCall.js';
-import { CallWaveform } from '../calling/CallWaveform.jsx';
 import { CallTimer } from '../calling/CallTimer.jsx';
 import { widgetBackground, callStyle } from '../../utils/pageSettings.js';
 import { cn } from '../../lib/cn.js';
@@ -52,43 +51,34 @@ function TypingDots() {
   );
 }
 
-/** Glowing orb with expanding rings — the "live call" centrepiece. */
-function CallOrb({ image, speaking }) {
+const WAVE_BARS = 36;
+
+/**
+ * Live-call wave. Bars follow a bell curve (tallest in the middle) and react to
+ * the agent's volume, beating faster while it speaks.
+ */
+function CallWave({ live, speaking, volume = 0 }) {
+  const mid = (WAVE_BARS - 1) / 2;
   return (
-    <div className="relative flex h-56 w-56 items-center justify-center">
-      {/* Expanding halo rings */}
-      {[0, 1, 2].map((i) => (
-        <motion.span
-          key={i}
-          className="absolute rounded-full border border-white/25"
-          style={{ width: 132, height: 132 }}
-          animate={{ scale: [1, 1.95], opacity: [0.55, 0] }}
-          transition={{ duration: 2.6, repeat: Infinity, delay: i * 0.85, ease: 'easeOut' }}
-        />
-      ))}
-
-      {/* Soft glow that breathes faster while the agent speaks */}
-      <motion.span
-        className="absolute rounded-full blur-3xl"
-        style={{
-          width: 200,
-          height: 200,
-          background: 'radial-gradient(circle, rgba(129,140,248,0.6), transparent 70%)',
-        }}
-        animate={{
-          scale: speaking ? [1, 1.18, 1] : [1, 1.06, 1],
-          opacity: speaking ? [0.7, 1, 0.7] : [0.5, 0.75, 0.5],
-        }}
-        transition={{ duration: speaking ? 1.1 : 2.6, repeat: Infinity, ease: 'easeInOut' }}
-      />
-
-      <motion.span
-        animate={{ scale: speaking ? [1, 1.05, 1] : 1 }}
-        transition={{ duration: 0.7, repeat: Infinity, ease: 'easeInOut' }}
-        className="relative"
-      >
-        <AgentFace size={116} image={image} className="ring-2 ring-white/30" />
-      </motion.span>
+    <div className="flex h-32 items-end justify-center gap-[5px]" aria-hidden>
+      {Array.from({ length: WAVE_BARS }).map((_, i) => {
+        const center = 1 - Math.abs(i - mid) / mid; // 1 in the middle → 0 at the edges
+        const base = 10 + center * 26;
+        const peak = base + (live ? volume * 80 + 22 : 8) * (0.35 + center);
+        return (
+          <motion.span
+            key={i}
+            className="w-[4px] rounded-full bg-gradient-to-t from-indigo-500 via-fuchsia-400 to-sky-300"
+            animate={{ height: [base, Math.min(peak, 124), base] }}
+            transition={{
+              duration: (speaking ? 0.5 : 1.2) + (i % 6) * 0.05,
+              repeat: Infinity,
+              ease: 'easeInOut',
+              delay: i * 0.03,
+            }}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -110,7 +100,9 @@ function CallView({ agent, call, image, onBackToChat }) {
       animate={{ opacity: 1, scale: 1 }}
       className="flex flex-1 flex-col items-center justify-center gap-5 px-6 text-center"
     >
-      <CallOrb image={image} speaking={call.speaking} />
+      <AgentFace size={96} image={image} className="ring-2 ring-white/25" />
+
+      <CallWave live={live} speaking={call.speaking} volume={call.volume} />
 
       <div>
         <p className="text-lg font-semibold text-white">{label}</p>
@@ -123,10 +115,7 @@ function CallView({ agent, call, image, onBackToChat }) {
       </div>
 
       {call.status === 'active' && (
-        <>
-          <CallWaveform active volume={call.volume} speaking={call.speaking} className="w-full max-w-sm" />
-          <CallTimer seconds={call.duration} className="text-2xl font-bold tabular-nums text-white" />
-        </>
+        <CallTimer seconds={call.duration} className="text-2xl font-bold tabular-nums text-white" />
       )}
 
       <div className="mt-2 flex items-center gap-3">
