@@ -83,7 +83,7 @@ export default function PublicAgentPage() {
         </div>
 
         <div className="mt-8">
-          <h1 className="font-kalam text-[28px] font-bold uppercase tracking-tight sm:text-[34px]">
+          <h1 className="font-kalam text-[28px] font-bold tracking-tight sm:text-[34px]">
             {name}
           </h1>
           {role && (

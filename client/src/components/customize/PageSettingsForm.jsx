@@ -137,7 +137,7 @@ function WidgetPreview({ image, name, role, description, widget }) {
           <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-[#0b0b14] bg-emerald-400" />
         </span>
         <div>
-          <p className="text-[17px] font-bold uppercase tracking-tight text-white">{name || 'Your agent'}</p>
+          <p className="text-[17px] font-bold tracking-tight text-white">{name || 'Your agent'}</p>
           {role && (
             <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.2em] text-amber-300/90">{role}</p>
           )}
