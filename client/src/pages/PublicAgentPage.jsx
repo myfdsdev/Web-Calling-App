@@ -79,7 +79,7 @@ export default function PublicAgentPage() {
             animate={{ scale: [1, 1.08, 1], opacity: [0.55, 0.8, 0.55] }}
             transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
           />
-          <AgentFace size={176} image={image} className="relative ring-2 ring-white/25" />
+          <AgentFace size={100} image={image} className="relative ring-2 ring-white/25" />
         </div>
 
         <div className="mt-8">
@@ -87,18 +87,18 @@ export default function PublicAgentPage() {
             {name}
           </h1>
           {role && (
-            <p className="mt-2 font-prompt text-[13px] font-semibold uppercase tracking-[0.22em] text-amber-300/90">
+            <p className="mt-1 font-prompt text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-300/90">
               {role}
             </p>
           )}
         </div>
 
-        <p className="mx-auto mt-[52px] max-w-xl font-prompt text-[17px] font-extralight leading-relaxed text-white/80 sm:text-lg">
+        <p className="mx-auto mt-[10px] max-w-xl font-prompt text-[10px] font-extralight leading-relaxed text-white/80 sm:text-lg">
           {welcome}
         </p>
 
         {/* Equal-width actions so the pair reads as one balanced row */}
-        <div className="mt-[64px] flex w-full flex-col items-stretch gap-3.5 sm:w-auto sm:flex-row sm:items-center sm:gap-5">
+        <div className="mt-[40px] flex w-full flex-col items-stretch gap-3.5 sm:w-auto sm:flex-row sm:items-center sm:gap-5">
           <motion.button
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.98 }}
@@ -107,7 +107,7 @@ export default function PublicAgentPage() {
               setChatOpen(true);
             }}
             style={ctaStyle(w)}
-            className="inline-flex items-center justify-center gap-2.5 rounded-full px-8 py-4 font-prompt text-[15px] font-semibold text-white shadow-xl ring-1 ring-white/15 sm:min-w-[16rem]"
+            className="inline-flex items-center justify-center gap-2.5 rounded-full px-4 py-3 font-prompt text-[12px] font-semibold text-white shadow-xl ring-1 ring-white/15 sm:min-w-[10rem]"
           >
             <MessageSquare className="h-[18px] w-[18px]" />
             {cta}
@@ -122,7 +122,7 @@ export default function PublicAgentPage() {
                 setChatOpen(true);
               }}
               style={callStyle(w)}
-              className="inline-flex items-center justify-center gap-2.5 rounded-full px-8 py-4 font-prompt text-[15px] font-semibold text-white shadow-xl ring-1 ring-white/15 sm:min-w-[16rem]"
+              className="inline-flex items-center justify-center gap-2.5 rounded-full  px-4 py-3 font-prompt text-[12px] font-semibold text-white shadow-xl ring-1 ring-white/15 sm:min-w-[10rem]"
             >
               <Phone className="h-[18px] w-[18px]" />
               {callCta}
