@@ -89,3 +89,17 @@
     animation: none !important;
   }
 }
+
+/* ── Google Identity Services button ──────────────────────────────────────
+   GSI renders its pill inside wrapper elements that carry an opaque (white)
+   plate. On our dark auth cards that reads as a white box around the button,
+   so flatten every layer and let the pill itself provide the shape. */
+.gsi-holder,
+.gsi-holder > div,
+.gsi-holder > div > div,
+.gsi-holder iframe {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 9999px !important;
+  color-scheme: normal;
+}

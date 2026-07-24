@@ -74,7 +74,7 @@ export function GoogleSignInButton({ onCredential, text = 'signin_with' }) {
         <span className="text-[12px] font-medium text-ink-soft">or</span>
         <span className="h-px flex-1 bg-line" />
       </div>
-      <div ref={holder} className="flex justify-center" />
+      <div ref={holder} className="gsi-holder flex justify-center" />
       {failed && (
         <p className="mt-2 text-center text-[12px] text-ink-soft">
           Google sign-in couldn’t load. Please check your connection.
