@@ -1,8 +1,16 @@
+import { OAuth2Client } from 'google-auth-library';
 import { User } from '../models/User.js';
 import { signToken } from '../middleware/auth.js';
 import { ok, fail, AppError } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { registerSchema, loginSchema } from '../validators/agentValidator.js';
+import { registerSchema, loginSchema, googleAuthSchema } from '../validators/agentValidator.js';
+import { env, googleAuthEnabled } from '../config/env.js';
+
+let googleClient = null;
+function getGoogleClient() {
+  if (!googleClient) googleClient = new OAuth2Client(env.googleClientId);
+  return googleClient;
+}
 
 export const register = asyncHandler(async (req, res) => {
   const { name, email, password } = registerSchema.parse(req.body);
@@ -24,11 +32,75 @@ export const login = asyncHandler(async (req, res) => {
   const user = await User.findOne({ email }).select('+passwordHash');
   if (!user) return fail(res, 'Invalid email or password.', 401, 'INVALID_CREDENTIALS');
 
+  // Google-only account: point them at the right button instead of a dead end.
+  if (!user.passwordHash && user.googleId) {
+    return fail(res, 'This account uses Google sign-in. Continue with Google.', 401, 'USE_GOOGLE');
+  }
+
   const valid = await user.verifyPassword(password);
   if (!valid) return fail(res, 'Invalid email or password.', 401, 'INVALID_CREDENTIALS');
 
   const token = signToken(user._id);
   return ok(res, { token, user: user.toPublic() }, 'Signed in.');
+});
+
+/**
+ * POST /api/auth/google
+ * Exchange a Google ID token for our own session token. Signs the user in if
+ * the email already exists, otherwise creates the account.
+ */
+export const googleAuth = asyncHandler(async (req, res) => {
+  if (!googleAuthEnabled()) {
+    throw new AppError(
+      'Google sign-in is not configured on the server.',
+      503,
+      'GOOGLE_NOT_CONFIGURED'
+    );
+  }
+
+  const { credential } = googleAuthSchema.parse(req.body);
+
+  let payload;
+  try {
+    const ticket = await getGoogleClient().verifyIdToken({
+      idToken: credential,
+      audience: env.googleClientId,
+    });
+    payload = ticket.getPayload();
+  } catch {
+    return fail(res, 'Could not verify your Google sign-in. Please try again.', 401, 'GOOGLE_INVALID_TOKEN');
+  }
+
+  if (!payload?.email || !payload.email_verified) {
+    return fail(res, 'Your Google account has no verified email.', 401, 'GOOGLE_EMAIL_UNVERIFIED');
+  }
+
+  const email = payload.email.toLowerCase();
+  let user = await User.findOne({ email });
+
+  if (user) {
+    // Link the Google identity to the existing account on first use.
+    let dirty = false;
+    if (!user.googleId) {
+      user.googleId = payload.sub;
+      dirty = true;
+    }
+    if (!user.avatarUrl && payload.picture) {
+      user.avatarUrl = payload.picture;
+      dirty = true;
+    }
+    if (dirty) await user.save();
+  } else {
+    user = await User.create({
+      name: payload.name || email.split('@')[0],
+      email,
+      googleId: payload.sub,
+      avatarUrl: payload.picture || '',
+    });
+  }
+
+  const token = signToken(user._id);
+  return ok(res, { token, user: user.toPublic() }, 'Signed in with Google.');
 });
 
 export const me = asyncHandler(async (req, res) => {

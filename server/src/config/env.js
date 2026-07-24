@@ -22,6 +22,12 @@ export const env = {
   jwtSecret: process.env.JWT_SECRET || 'dev-insecure-secret-change-me',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
 
+  googleClientId: process.env.GOOGLE_CLIENT_ID || '',
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+  googleCallbackUrl:
+    process.env.GOOGLE_CALLBACK_URL ||
+    `${(process.env.BACKEND_URL || 'http://localhost:5000').replace(/\/$/, '')}/api/auth/google/callback`,
+
   geminiApiKey: process.env.GEMINI_API_KEY || '',
   geminiModel: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
 
@@ -38,6 +44,9 @@ export const env = {
 
   verboseLogs: bool(process.env.VERBOSE_LOGS, false),
 };
+
+/** True when Google sign-in is configured. */
+export const googleAuthEnabled = () => Boolean(env.googleClientId);
 
 /** True when a real Gemini key is configured. */
 export const geminiEnabled = () => Boolean(env.geminiApiKey);

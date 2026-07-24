@@ -3,12 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { User, Mail, Lock } from 'lucide-react';
 import { AuthShell } from '../components/auth/AuthShell.jsx';
+import { GoogleSignInButton } from '../components/auth/GoogleSignInButton.jsx';
 import { Input } from '../components/ui/Input.jsx';
 import { Button } from '../components/ui/Button.jsx';
 import { useAuthStore } from '../stores/authStore.js';
 
 export default function SignupPage() {
   const register = useAuthStore((s) => s.register);
+  const loginWithGoogle = useAuthStore((s) => s.loginWithGoogle);
   const navigate = useNavigate();
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [loading, setLoading] = useState(false);
@@ -26,6 +28,17 @@ export default function SignupPage() {
       setError(err.normalizedMessage || 'Unable to create account.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const onGoogle = async (credential) => {
+    setError('');
+    try {
+      await loginWithGoogle(credential);
+      toast.success('Welcome to Vox!');
+      navigate('/dashboard', { replace: true });
+    } catch (err) {
+      setError(err.normalizedMessage || 'Google sign-up failed.');
     }
   };
 
@@ -82,6 +95,8 @@ export default function SignupPage() {
           Create account
         </Button>
       </form>
+
+      <GoogleSignInButton onCredential={onGoogle} text="signup_with" />
 
       <p className="mt-6 text-center text-sm text-ink-soft">
         Already have an account?{' '}

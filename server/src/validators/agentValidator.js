@@ -6,6 +6,11 @@ export const registerSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters').max(200),
 });
 
+/** The ID token Google Identity Services hands back in the browser. */
+export const googleAuthSchema = z.object({
+  credential: z.string().min(20, 'Missing Google credential').max(4000),
+});
+
 export const loginSchema = z.object({
   email: z.string().email('Enter a valid email'),
   password: z.string().min(1, 'Password is required'),

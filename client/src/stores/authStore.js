@@ -30,6 +30,13 @@ export const useAuthStore = create((set) => ({
     return user;
   },
 
+  async loginWithGoogle(credential) {
+    const { token, user } = await authService.google(credential);
+    setToken(token);
+    set({ user, status: 'authed', hydrated: true });
+    return user;
+  },
+
   async register(payload) {
     const { token, user } = await authService.register(payload);
     setToken(token);

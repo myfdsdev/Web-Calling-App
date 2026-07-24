@@ -20,7 +20,12 @@ const userSchema = new mongoose.Schema(
       trim: true,
       index: true,
     },
-    passwordHash: { type: String, required: true, select: false },
+    // Optional: accounts created through Google sign-in have no password.
+    passwordHash: { type: String, default: '', select: false },
+
+    // Google sign-in
+    googleId: { type: String, default: '', index: true },
+    avatarUrl: { type: String, default: '' },
 
     // ── Plan + credits ──────────────────────────────────────────────────────
     plan: { type: String, default: DEFAULT_PLAN_ID, index: true },
@@ -39,6 +44,8 @@ userSchema.methods.setPassword = async function setPassword(plain) {
 };
 
 userSchema.methods.verifyPassword = function verifyPassword(plain) {
+  // Google-only accounts have no hash — never let an empty one match.
+  if (!this.passwordHash) return Promise.resolve(false);
   return bcrypt.compare(plain, this.passwordHash);
 };
 
@@ -49,6 +56,7 @@ userSchema.methods.toPublic = function toPublic() {
     email: this.email,
     plan: this.plan,
     credits: (this.credits || 0) + (this.bonusCredits || 0),
+    avatarUrl: this.avatarUrl,
   };
 };
 

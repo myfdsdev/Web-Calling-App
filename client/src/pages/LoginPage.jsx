@@ -3,17 +3,22 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Mail, Lock } from 'lucide-react';
 import { AuthShell } from '../components/auth/AuthShell.jsx';
+import { GoogleSignInButton } from '../components/auth/GoogleSignInButton.jsx';
 import { Input } from '../components/ui/Input.jsx';
 import { Button } from '../components/ui/Button.jsx';
 import { useAuthStore } from '../stores/authStore.js';
 
 export default function LoginPage() {
   const login = useAuthStore((s) => s.login);
+  const loginWithGoogle = useAuthStore((s) => s.loginWithGoogle);
   const navigate = useNavigate();
   const location = useLocation();
   const [form, setForm] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const goHome = () =>
+    navigate(location.state?.from?.pathname || '/dashboard', { replace: true });
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -22,11 +27,22 @@ export default function LoginPage() {
     try {
       await login(form);
       toast.success('Welcome back!');
-      navigate(location.state?.from?.pathname || '/dashboard', { replace: true });
+      goHome();
     } catch (err) {
       setError(err.normalizedMessage || 'Unable to sign in.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const onGoogle = async (credential) => {
+    setError('');
+    try {
+      await loginWithGoogle(credential);
+      toast.success('Welcome back!');
+      goHome();
+    } catch (err) {
+      setError(err.normalizedMessage || 'Google sign-in failed.');
     }
   };
 
@@ -69,6 +85,8 @@ export default function LoginPage() {
           Sign in
         </Button>
       </form>
+
+      <GoogleSignInButton onCredential={onGoogle} text="signin_with" />
 
       <p className="mt-6 text-center text-sm text-ink-soft">
         Don’t have an account?{' '}
