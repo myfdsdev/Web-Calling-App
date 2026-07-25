@@ -16,6 +16,10 @@ export const env = {
     .map((s) => s.trim())
     .filter(Boolean),
   backendUrl: process.env.BACKEND_URL || 'http://localhost:5000',
+  /** Canonical app origin — used to build shareable links (e.g. team invites). */
+  appUrl: (process.env.APP_URL || (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0])
+    .trim()
+    .replace(/\/$/, ''),
 
   mongoUri: process.env.MONGODB_URI || '',
 

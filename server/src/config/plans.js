@@ -38,12 +38,14 @@ export const PLANS = [
     priceMonthly: 0,
     credits: 100, // ≈ 10 voice minutes
     maxAgents: 1,
+    maxMembers: 1, // just you
     features: [
       '1 voice agent',
       '100 credits / month (~10 call minutes)',
       'Shareable public page',
       'Chat + web calling',
       'Lead capture',
+      'Solo workspace',
     ],
     limits: { customBranding: false, customCode: false, prioritySupport: false },
   },
@@ -54,11 +56,13 @@ export const PLANS = [
     priceMonthly: 19,
     credits: 600, // 60 voice minutes · cost $5.40 · margin ~72% · $0.32/min
     maxAgents: 3,
+    maxMembers: 3,
     popular: false,
     features: [
       '3 voice agents',
       '600 credits / month (~60 call minutes)',
       'Everything in Free',
+      'Invite up to 3 teammates',
       'Full page customization',
       'Email support',
     ],
@@ -71,11 +75,13 @@ export const PLANS = [
     priceMonthly: 49,
     credits: 1800, // 180 voice minutes · cost $16.20 · margin ~67% · $0.27/min
     maxAgents: 10,
+    maxMembers: 10,
     popular: true,
     features: [
       '10 voice agents',
       '1,800 credits / month (~180 call minutes)',
       'Everything in Starter',
+      'Invite up to 10 teammates',
       'Remove “Powered by” branding',
       'Custom code / tracking pixels',
     ],
@@ -88,10 +94,12 @@ export const PLANS = [
     priceMonthly: 149,
     credits: 6000, // 600 voice minutes · cost $54 · margin ~64% · $0.25/min
     maxAgents: 50,
+    maxMembers: 50,
     features: [
       '50 voice agents',
       '6,000 credits / month (~600 call minutes)',
       'Everything in Pro',
+      'Invite up to 50 teammates',
       'Priority support',
       'Highest concurrency',
     ],

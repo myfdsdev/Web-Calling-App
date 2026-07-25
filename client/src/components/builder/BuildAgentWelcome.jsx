@@ -283,7 +283,7 @@ export function BuildAgentWelcome({
             {/* Templates (only before the flow starts) + composer */}
             <div className="flex-none border-t border-line/70 px-4 pb-5 pt-4 sm:px-5">
               {!started && (
-                <div className="mb-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="-mx-1 mb-3 flex gap-2 overflow-x-auto px-1 py-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {AGENT_TEMPLATES.map((t) => {
                     const Icon = t.icon;
                     return (
@@ -293,9 +293,9 @@ export function BuildAgentWelcome({
                         disabled={busy}
                         onClick={() => pickTemplate(t)}
                         className={cn(
-                          'inline-flex flex-none items-center gap-2 rounded-full border border-line bg-surface-2 py-1.5 pl-1.5 pr-3.5',
+                          'inline-flex flex-none items-center gap-2 rounded-full border border-line-strong bg-surface-2 py-1.5 pl-1.5 pr-3.5',
                           'text-[13px] font-semibold text-ink transition-all duration-150',
-                          'hover:-translate-y-px hover:border-white/20 disabled:cursor-not-allowed disabled:opacity-50'
+                          'hover:-translate-y-px hover:border-white/30 disabled:cursor-not-allowed disabled:opacity-50'
                         )}
                       >
                         <span className={cn('flex h-6 w-6 items-center justify-center rounded-full', t.tint)}>

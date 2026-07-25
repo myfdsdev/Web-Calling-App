@@ -12,8 +12,6 @@ import {
   Mic,
   MessageSquare,
   ShieldAlert,
-  Link2,
-  CheckCircle2,
   Palette,
   Globe,
   Copy,
@@ -109,7 +107,6 @@ export default function AgentDetailsPage() {
   }
 
   const agent = data.agent;
-  const connected = Boolean(agent.vapiAssistantId);
 
   return (
     <PageContainer>
@@ -188,33 +185,6 @@ export default function AgentDetailsPage() {
           <DetailCard icon={ShieldAlert} title="Escalation Behavior">
             <p>{agent.escalationInstructions || 'Collect caller details and have the team follow up.'}</p>
           </DetailCard>
-
-          <Card className="p-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.06] text-ink-soft">
-                  <Link2 className="h-4 w-4" />
-                </span>
-                <div>
-                  <h3 className="text-card-title font-semibold text-ink">Vapi Connection</h3>
-                  <p className="text-xs text-ink-soft">
-                    {connected ? 'Assistant connected and ready for web calling.' : 'Not connected.'}
-                  </p>
-                </div>
-              </div>
-              {connected && (
-                <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-success">
-                  <CheckCircle2 className="h-4 w-4" />
-                  Connected
-                </span>
-              )}
-            </div>
-            {connected && (
-              <p className="mt-3 truncate rounded-lg bg-surface px-3 py-2 font-mono text-[12px] text-ink-soft">
-                {agent.vapiAssistantId}
-              </p>
-            )}
-          </Card>
 
           {/* Public share page */}
           <Card className="p-5">
