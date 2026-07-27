@@ -47,12 +47,19 @@ describe('Agents listing & ownership', () => {
     expect(vapi.calls.length).toBe(before); // no Vapi call for a status-only change
   });
 
-  it('blocks a non-owner from updating an agent', async () => {
+  it('blocks a non-member from updating another workspace\'s agent', async () => {
     const owner = await makeUser();
     const intruder = await makeUser();
     const agent = await createAgent(owner, 'asst_o');
+    // The intruder acts in their own (personal) workspace, which the agent isn't
+    // part of — so it's simply not found for them (we don't leak its existence).
     const res = await intruder.bearer(request(app).patch(`/api/agents/${agent.id}`)).send({ name: 'Hacked' });
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe('AGENT_NOT_FOUND');
+
+    // And the agent is untouched.
+    const check = await owner.bearer(request(app).get(`/api/agents/${agent.id}`));
+    expect(check.body.data.agent.name).not.toBe('Hacked');
   });
 
   it('returns dashboard summary counts', async () => {

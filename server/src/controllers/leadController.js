@@ -3,19 +3,17 @@ import { ok, AppError } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { leadUpdateSchema } from '../validators/agentValidator.js';
 
-async function getOwnedLead(id, userId) {
-  const lead = await Lead.findById(id);
+/** Leads are shared across the workspace — scope by that, not the caller. */
+async function getWorkspaceLead(id, workspaceId) {
+  const lead = await Lead.findOne({ _id: id, workspaceId });
   if (!lead) throw new AppError('Lead not found.', 404, 'LEAD_NOT_FOUND');
-  if (lead.userId.toString() !== userId.toString()) {
-    throw new AppError('You do not have access to this lead.', 403, 'FORBIDDEN');
-  }
   return lead;
 }
 
-/** GET /api/leads — the owner's captured leads, newest activity first. */
+/** GET /api/leads — the workspace's captured leads, newest activity first. */
 export const listLeads = asyncHandler(async (req, res) => {
   const { agentId, channel, status, search } = req.query;
-  const query = { userId: req.user.id };
+  const query = { workspaceId: req.workspaceId };
   if (agentId) query.agentId = agentId;
   if (channel && ['chat', 'call'].includes(channel)) query.channel = channel;
   if (status && ['new', 'contacted', 'qualified', 'closed'].includes(status)) query.status = status;
@@ -29,25 +27,25 @@ export const listLeads = asyncHandler(async (req, res) => {
 
 /** GET /api/leads/summary — quick counts for the header. */
 export const leadsSummary = asyncHandler(async (req, res) => {
-  const userId = req.user.id;
+  const scope = { workspaceId: req.workspaceId };
   const [total, newCount, chat, call] = await Promise.all([
-    Lead.countDocuments({ userId }),
-    Lead.countDocuments({ userId, status: 'new' }),
-    Lead.countDocuments({ userId, channel: 'chat' }),
-    Lead.countDocuments({ userId, channel: 'call' }),
+    Lead.countDocuments(scope),
+    Lead.countDocuments({ ...scope, status: 'new' }),
+    Lead.countDocuments({ ...scope, channel: 'chat' }),
+    Lead.countDocuments({ ...scope, channel: 'call' }),
   ]);
   return ok(res, { total, new: newCount, chat, call });
 });
 
 /** GET /api/leads/:id */
 export const getLead = asyncHandler(async (req, res) => {
-  const lead = await getOwnedLead(req.params.id, req.user.id);
+  const lead = await getWorkspaceLead(req.params.id, req.workspaceId);
   return ok(res, { lead: lead.toJSONView() });
 });
 
 /** PATCH /api/leads/:id — update status / edit captured contact details. */
 export const updateLead = asyncHandler(async (req, res) => {
-  const lead = await getOwnedLead(req.params.id, req.user.id);
+  const lead = await getWorkspaceLead(req.params.id, req.workspaceId);
   const updates = leadUpdateSchema.parse(req.body);
   Object.assign(lead, updates);
   await lead.save();
@@ -56,7 +54,7 @@ export const updateLead = asyncHandler(async (req, res) => {
 
 /** DELETE /api/leads/:id */
 export const deleteLead = asyncHandler(async (req, res) => {
-  const lead = await getOwnedLead(req.params.id, req.user.id);
+  const lead = await getWorkspaceLead(req.params.id, req.workspaceId);
   await lead.deleteOne();
   return ok(res, {}, 'Lead deleted.');
 });

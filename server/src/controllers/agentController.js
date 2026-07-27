@@ -13,19 +13,17 @@ import { buildAssistantPayload, updateAssistant, deleteAssistant } from '../serv
 import { env, vapiEnabled } from '../config/env.js';
 import { genPublicId } from '../utils/ids.js';
 
-async function getOwnedAgent(agentId, userId) {
-  const agent = await Agent.findById(agentId);
+/** An agent is accessible to everyone in its workspace — scope by that, not the caller. */
+async function getWorkspaceAgent(agentId, workspaceId) {
+  const agent = await Agent.findOne({ _id: agentId, workspaceId });
   if (!agent) throw new AppError('Agent not found.', 404, 'AGENT_NOT_FOUND');
-  if (agent.userId.toString() !== userId.toString()) {
-    throw new AppError('You do not have access to this agent.', 403, 'FORBIDDEN');
-  }
   return agent;
 }
 
 /** GET /api/agents */
 export const listAgents = asyncHandler(async (req, res) => {
   const { search, status } = req.query;
-  const query = { userId: req.user.id };
+  const query = { workspaceId: req.workspaceId };
   if (status && ['active', 'draft', 'disabled', 'failed'].includes(status)) query.status = status;
   if (search) {
     const rx = new RegExp(String(search).slice(0, 60).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
@@ -37,7 +35,7 @@ export const listAgents = asyncHandler(async (req, res) => {
 
 /** GET /api/agents/summary — dashboard metrics. */
 export const summary = asyncHandler(async (req, res) => {
-  const agents = await Agent.find({ userId: req.user.id });
+  const agents = await Agent.find({ workspaceId: req.workspaceId });
   const today = new Date().toISOString().slice(0, 10);
   const totalAgents = agents.length;
   const activeAgents = agents.filter((a) => a.status === 'active').length;
@@ -54,7 +52,7 @@ export const summary = asyncHandler(async (req, res) => {
 
 /** GET /api/agents/:agentId */
 export const getAgent = asyncHandler(async (req, res) => {
-  const agent = await getOwnedAgent(req.params.agentId, req.user.id);
+  const agent = await getWorkspaceAgent(req.params.agentId, req.workspaceId);
   return ok(res, { agent: agent.toJSONView() });
 });
 
@@ -64,7 +62,7 @@ export const getAgent = asyncHandler(async (req, res) => {
  * Local DB is only saved after the Vapi update succeeds.
  */
 export const updateAgent = asyncHandler(async (req, res) => {
-  const agent = await getOwnedAgent(req.params.agentId, req.user.id);
+  const agent = await getWorkspaceAgent(req.params.agentId, req.workspaceId);
   const updates = updateAgentSchema.parse(req.body);
 
   // Fields that affect the Vapi assistant. Appearance/publish/status fields are
@@ -244,7 +242,7 @@ export const publicCallLead = asyncHandler(async (req, res) => {
  * Removes the Vapi assistant (ignoring 404) then deletes the local agent.
  */
 export const deleteAgent = asyncHandler(async (req, res) => {
-  const agent = await getOwnedAgent(req.params.agentId, req.user.id);
+  const agent = await getWorkspaceAgent(req.params.agentId, req.workspaceId);
 
   if (agent.vapiAssistantId && vapiEnabled()) {
     try {

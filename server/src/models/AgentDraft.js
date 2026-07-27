@@ -3,6 +3,8 @@ import mongoose from 'mongoose';
 const agentDraftSchema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    // The workspace this draft's agent will be created in.
+    workspaceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Workspace', index: true, default: null },
 
     agentName: { type: String, default: '' },
     businessName: { type: String, default: '' },

@@ -9,7 +9,10 @@ process.env.VAPI_PUBLIC_KEY = 'test-vapi-public-key';
 process.env.VAPI_BASE_URL = 'https://api.vapi.ai';
 process.env.BACKEND_URL = 'http://localhost:5000';
 process.env.VAPI_WEBHOOK_SECRET = '';
-// Gemini intentionally left unset so tests exercise the deterministic fallback.
+// Force Gemini OFF so tests exercise the deterministic fallback — otherwise a real
+// GEMINI_API_KEY in the developer's .env (loaded by dotenv) makes extraction hit
+// the live API and return nondeterministic results (e.g. re-cased service names).
+process.env.GEMINI_API_KEY = '';
 
 jest.setTimeout(30000);
 

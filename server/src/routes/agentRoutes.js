@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
+import { withWorkspace, requirePermission } from '../middleware/workspace.js';
 import {
   listAgents,
   summary,
@@ -10,12 +11,12 @@ import {
 
 const router = Router();
 
-router.use(requireAuth);
+router.use(requireAuth, withWorkspace);
 
 router.get('/summary', summary);
 router.get('/', listAgents);
 router.get('/:agentId', getAgent);
-router.patch('/:agentId', updateAgent);
-router.delete('/:agentId', deleteAgent);
+router.patch('/:agentId', requirePermission('agents:write'), updateAgent);
+router.delete('/:agentId', requirePermission('agents:write'), deleteAgent);
 
 export default router;

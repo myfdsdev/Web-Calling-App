@@ -5,6 +5,7 @@ const baseURL = import.meta.env.VITE_API_URL || '/api';
 export const api = axios.create({ baseURL });
 
 const TOKEN_KEY = 'vox.token';
+const WORKSPACE_KEY = 'vox.workspace';
 
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY);
@@ -14,9 +15,20 @@ export function setToken(token) {
   else localStorage.removeItem(TOKEN_KEY);
 }
 
+/** The active workspace id — sent on every request so the API scopes to it. */
+export function getWorkspaceId() {
+  return localStorage.getItem(WORKSPACE_KEY);
+}
+export function setWorkspaceId(id) {
+  if (id) localStorage.setItem(WORKSPACE_KEY, id);
+  else localStorage.removeItem(WORKSPACE_KEY);
+}
+
 api.interceptors.request.use((config) => {
   const token = getToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  const workspaceId = getWorkspaceId();
+  if (workspaceId) config.headers['x-workspace-id'] = workspaceId;
   return config;
 });
 
@@ -36,6 +48,12 @@ api.interceptors.response.use(
       if (!['/login', '/signup'].includes(window.location.pathname)) {
         window.dispatchEvent(new CustomEvent('vox:session-expired'));
       }
+    }
+    // The active workspace is gone (member removed, or workspace deleted). Drop it
+    // and let the app fall back to the personal workspace.
+    if (error.response?.status === 403 && code === 'WORKSPACE_ACCESS_REVOKED') {
+      setWorkspaceId(null);
+      window.dispatchEvent(new CustomEvent('vox:workspace-invalid'));
     }
     return Promise.reject(Object.assign(error, { normalizedMessage: message, code }));
   }

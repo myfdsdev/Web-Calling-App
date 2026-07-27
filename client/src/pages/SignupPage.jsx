@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { User, Mail, Lock } from 'lucide-react';
 import { AuthShell } from '../components/auth/AuthShell.jsx';
@@ -12,9 +12,14 @@ export default function SignupPage() {
   const register = useAuthStore((s) => s.register);
   const loginWithGoogle = useAuthStore((s) => s.loginWithGoogle);
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const location = useLocation();
+  // When arriving from an invite link, come back to it after signing up
+  // (and pre-fill the invited email so it matches the invitation).
+  const [form, setForm] = useState({ name: '', email: location.state?.email || '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const goHome = () => navigate(location.state?.from?.pathname || '/dashboard', { replace: true });
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -23,7 +28,7 @@ export default function SignupPage() {
     try {
       await register(form);
       toast.success('Account created — welcome to Vox!');
-      navigate('/dashboard', { replace: true });
+      goHome();
     } catch (err) {
       setError(err.normalizedMessage || 'Unable to create account.');
     } finally {
@@ -36,7 +41,7 @@ export default function SignupPage() {
     try {
       await loginWithGoogle(credential);
       toast.success('Welcome to Vox!');
-      navigate('/dashboard', { replace: true });
+      goHome();
     } catch (err) {
       setError(err.normalizedMessage || 'Google sign-up failed.');
     }

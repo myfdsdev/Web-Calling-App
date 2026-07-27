@@ -99,6 +99,7 @@ export const start = asyncHandler(async (req, res) => {
     draft = await AgentDraft.findOne({
       _id: requestedId,
       userId,
+      workspaceId: req.workspaceId,
       status: { $in: ['draft', 'ready-for-review', 'failed'] },
     });
     resumed = Boolean(draft);
@@ -106,14 +107,25 @@ export const start = asyncHandler(async (req, res) => {
 
   if (!draft) {
     // Discard abandoned mid-conversation drafts so they can never resurface.
-    const stale = await AgentDraft.find({ userId, status: 'draft' }).select('_id');
+    // Scoped to this workspace so switching workspaces never nukes the other's draft.
+    const stale = await AgentDraft.find({
+      userId,
+      workspaceId: req.workspaceId,
+      status: 'draft',
+    }).select('_id');
     if (stale.length) {
       const ids = stale.map((d) => d._id);
       await AgentBuilderMessage.deleteMany({ draftId: { $in: ids } });
       await AgentDraft.deleteMany({ _id: { $in: ids } });
     }
 
-    draft = await AgentDraft.create({ userId, currentStep: 1, completionPercentage: 5, status: 'draft' });
+    draft = await AgentDraft.create({
+      userId,
+      workspaceId: req.workspaceId,
+      currentStep: 1,
+      completionPercentage: 5,
+      status: 'draft',
+    });
     const first = await assistantForCurrent(draft);
     await addMessage(draft, userId, 'assistant', first.content, first.stepKey, first.structuredData);
   }
@@ -268,7 +280,10 @@ export const message = asyncHandler(async (req, res) => {
 
 /** GET /api/agent-builder/drafts */
 export const listDrafts = asyncHandler(async (req, res) => {
-  const drafts = await AgentDraft.find({ userId: req.user.id }).sort({ updatedAt: -1 });
+  const drafts = await AgentDraft.find({
+    userId: req.user.id,
+    workspaceId: req.workspaceId,
+  }).sort({ updatedAt: -1 });
   return ok(res, { drafts: drafts.map((d) => d.toJSONView()) });
 });
 
@@ -355,15 +370,19 @@ export const createVapiAgent = asyncHandler(async (req, res) => {
   const userId = req.user.id;
 
   // First, if an agent already exists for this draft, return it (idempotent).
-  const existingAgent = await Agent.findOne({ createdFromDraftId: req.params.draftId, userId });
+  const existingAgent = await Agent.findOne({
+    createdFromDraftId: req.params.draftId,
+    workspaceId: req.workspaceId,
+  });
   if (existingAgent) {
     return ok(res, { agent: existingAgent.toJSONView(), alreadyCreated: true }, 'Agent already created.');
   }
 
-  // Enforce the plan's agent allowance before creating anything on Vapi.
-  const account = await getAccount(userId);
+  // Enforce the allowance against the OWNER's plan (they pay) and the workspace's
+  // agent count — agents are shared, so teammates draw from the same allowance.
+  const account = await getAccount(req.ownerId);
   const plan = getPlan(account?.plan);
-  const agentCount = await Agent.countDocuments({ userId });
+  const agentCount = await Agent.countDocuments({ workspaceId: req.workspaceId });
   if (agentCount >= plan.maxAgents) {
     throw new AppError(
       `Your ${plan.name} plan includes ${plan.maxAgents} agent${plan.maxAgents === 1 ? '' : 's'}. Upgrade to create more.`,
@@ -405,7 +424,10 @@ export const createVapiAgent = asyncHandler(async (req, res) => {
     const assistant = await createAssistant(payload);
 
     const agent = await Agent.create({
-      userId,
+      // Billing account = workspace owner; `createdByUserId` records the builder.
+      userId: req.ownerId,
+      workspaceId: req.workspaceId,
+      createdByUserId: userId,
       name: draft.agentName,
       businessName: draft.businessName,
       businessType: draft.businessType,

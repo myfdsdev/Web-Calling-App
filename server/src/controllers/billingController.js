@@ -25,13 +25,17 @@ export const listPlans = asyncHandler(async (req, res) => {
   });
 });
 
-/** GET /api/billing/me — current plan, balance and this cycle's usage. */
+/**
+ * GET /api/billing/me — plan, balance and usage for the ACTIVE WORKSPACE.
+ * Credits are a shared pool owned by the workspace owner, so every member sees
+ * the same balance (members read-only; only the owner can change it).
+ */
 export const myBilling = asyncHandler(async (req, res) => {
-  const user = await getAccount(req.user.id);
+  const user = await getAccount(req.ownerId);
   if (!user) throw new AppError('Account not found.', 404, 'USER_NOT_FOUND');
 
   const plan = getPlan(user.plan);
-  const agentCount = await Agent.countDocuments({ userId: user._id });
+  const agentCount = await Agent.countDocuments({ workspaceId: req.workspaceId });
 
   // Usage since the current cycle started (renewal date minus one month).
   const cycleStart = new Date(user.creditsRenewAt || Date.now());
@@ -82,7 +86,7 @@ export const setPlan = asyncHandler(async (req, res) => {
   if (!PLANS.some((p) => p.id === planId)) {
     throw new AppError('Unknown plan.', 422, 'UNKNOWN_PLAN');
   }
-  const user = await changePlan(req.user.id, planId);
+  const user = await changePlan(req.ownerId, planId);
   if (!user) throw new AppError('Account not found.', 404, 'USER_NOT_FOUND');
   const plan = getPlan(user.plan);
   return ok(res, { plan, credits: balanceOf(user) }, `Switched to ${plan.name}.`);
@@ -96,14 +100,14 @@ export const topUp = asyncHandler(async (req, res) => {
   const { packId } = topUpSchema.parse(req.body);
   const pack = getPack(packId);
   if (!pack) throw new AppError('Unknown credit pack.', 422, 'UNKNOWN_PACK');
-  const user = await addTopUp(req.user.id, pack.credits, `${pack.credits} credit pack`);
+  const user = await addTopUp(req.ownerId, pack.credits, `${pack.credits} credit pack`);
   if (!user) throw new AppError('Account not found.', 404, 'USER_NOT_FOUND');
   return ok(res, { credits: balanceOf(user) }, `${pack.credits} credits added.`);
 });
 
 /** GET /api/billing/transactions — recent ledger entries. */
 export const listTransactions = asyncHandler(async (req, res) => {
-  const rows = await CreditTransaction.find({ userId: req.user.id })
+  const rows = await CreditTransaction.find({ userId: req.ownerId })
     .sort({ createdAt: -1 })
     .limit(100);
   return ok(res, { transactions: rows.map((r) => r.toJSONView()) });

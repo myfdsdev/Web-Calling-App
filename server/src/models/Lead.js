@@ -10,6 +10,9 @@ const lineSchema = new mongoose.Schema({ role: String, content: String }, { _id:
 const leadSchema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    // Workspace the lead belongs to (mirrors the agent's). Nullable for leads
+    // captured before workspaces existed, until they're adopted.
+    workspaceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Workspace', index: true, default: null },
     agentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Agent', index: true },
     agentName: { type: String, default: '' },
     publicId: { type: String, default: '' },

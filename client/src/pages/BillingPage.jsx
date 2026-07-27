@@ -8,6 +8,7 @@ import {
   Sparkles,
   ArrowUpRight,
   Clock,
+  Lock,
 } from 'lucide-react';
 import { PageContainer } from '../components/layout/PageContainer.jsx';
 import { Card } from '../components/ui/Card.jsx';
@@ -23,6 +24,7 @@ import {
   useSetPlan,
   useTopUp,
 } from '../hooks/useBilling.js';
+import { useCan, useActiveWorkspace } from '../hooks/useWorkspaces.js';
 import { pageVariants, staggerItem } from '../lib/motion.js';
 import { cn } from '../lib/cn.js';
 
@@ -115,6 +117,9 @@ export default function BillingPage() {
   const txQuery = useCreditTransactions();
   const setPlan = useSetPlan();
   const topUp = useTopUp();
+  // Credits are the workspace owner's account — only they can change the plan.
+  const canManageBilling = useCan('billing:manage');
+  const active = useActiveWorkspace();
 
   if (plansQuery.isLoading || meQuery.isLoading) {
     return <FullPageLoader inline label="Loading your plan…" />;
@@ -133,6 +138,8 @@ export default function BillingPage() {
 
   const usedThisCycle = Math.max(0, credits.allowance - credits.monthly);
   const usedPct = credits.allowance ? Math.round((usedThisCycle / credits.allowance) * 100) : 0;
+  // Non-owners see the shared balance but can't spend money.
+  const locked = !canManageBilling;
   const busy = setPlan.isPending || topUp.isPending;
 
   return (
@@ -140,10 +147,27 @@ export default function BillingPage() {
       <div className="mb-6">
         <h1 className="text-[26px] font-bold tracking-tight text-ink md:text-[32px]">Plans & Credits</h1>
         <p className="mt-1.5 text-sm text-ink-soft md:text-[15px]">
-          Credits are spent when visitors talk to your agents — {rates.voiceCreditsPerMinute} per voice
-          minute, {rates.chatCreditsPerMessage} per chat reply.
+          {active && !active.isPersonal ? (
+            <>Shared credits for <b className="text-ink">{active.name}</b> — {rates.voiceCreditsPerMinute} per voice minute, {rates.chatCreditsPerMessage} per chat reply.</>
+          ) : (
+            <>Credits are spent when visitors talk to your agents — {rates.voiceCreditsPerMinute} per voice minute, {rates.chatCreditsPerMessage} per chat reply.</>
+          )}
         </p>
       </div>
+
+      {locked && (
+        <div className="mb-6 flex items-start gap-3 rounded-xl border border-line bg-surface px-4 py-3.5">
+          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-white/[0.06] text-ink-soft">
+            <Lock className="h-4 w-4" />
+          </span>
+          <div>
+            <p className="text-[13px] font-semibold text-ink">Billing is managed by the workspace owner</p>
+            <p className="mt-0.5 text-[12px] text-ink-soft">
+              You can see the shared balance and usage, but only the owner can change the plan or buy credits.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Current balance */}
       <Card className="mb-6 p-5 sm:p-6">

@@ -11,7 +11,7 @@ import { Agent } from '../models/Agent.js';
 import { Lead } from '../models/Lead.js';
 import { AgentDraft } from '../models/AgentDraft.js';
 import { AppError } from '../utils/apiResponse.js';
-import { ROLE_RANK } from '../config/roles.js';
+import { ROLE_RANK, permissionsFor } from '../config/roles.js';
 import { getPlan } from '../config/plans.js';
 import { env } from '../config/env.js';
 
@@ -118,8 +118,10 @@ export async function listWorkspacesFor(userId) {
   return workspaces
     .map((w) => {
       const key = w._id.toString();
+      const role = byWorkspace.get(key)?.role || 'viewer';
       return w.toJSONView({
-        role: byWorkspace.get(key)?.role || 'viewer',
+        role,
+        permissions: permissionsFor(role),
         memberCount: countByWorkspace.get(key) || 1,
       });
     })

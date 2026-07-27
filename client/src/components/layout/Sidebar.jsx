@@ -1,14 +1,14 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   LayoutDashboard,
   Bot,
   Users,
+  UsersRound,
   Zap,
   Plus,
   Search,
-  ChevronsUpDown,
   LogOut,
   Settings,
   Menu,
@@ -17,11 +17,13 @@ import {
 import { cn } from '../../lib/cn.js';
 import { useAuthStore } from '../../stores/authStore.js';
 import { useMyBilling } from '../../hooks/useBilling.js';
+import { WorkspaceSwitcher } from './WorkspaceSwitcher.jsx';
 
 const NAV = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/agents', label: 'Agents', icon: Bot, end: false },
   { to: '/leads', label: 'Leads', icon: Users, end: false },
+  { to: '/team', label: 'Team', icon: UsersRound, end: false },
   { to: '/billing', label: 'Plans & Credits', icon: Zap, end: false },
 ];
 
@@ -59,64 +61,6 @@ function NavItem({ to, label, icon: Icon, end, onNavigate }) {
       <Icon className="h-[18px] w-[18px]" />
       {label}
     </NavLink>
-  );
-}
-
-function WorkspacePill() {
-  const { user, logout } = useAuthStore();
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const onClick = (e) => ref.current && !ref.current.contains(e.target) && setOpen(false);
-    document.addEventListener('mousedown', onClick);
-    return () => document.removeEventListener('mousedown', onClick);
-  }, []);
-
-  const first = user?.name?.split(' ')[0] || 'My';
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2.5 rounded-lg border border-line px-2.5 py-2 text-left transition-colors hover:bg-white/[0.04] focus-ring"
-      >
-        <span className="flex h-6 w-6 flex-none items-center justify-center rounded-md bg-white/10 text-[11px] font-bold text-ink">
-          {(user?.name || 'U').slice(0, 1).toUpperCase()}
-        </span>
-        <span className="flex-1 truncate text-[13px] font-semibold text-ink">{first}’s workspace</span>
-        <ChevronsUpDown className="h-4 w-4 flex-none text-ink-soft" />
-      </button>
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -4, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.98 }}
-            transition={{ duration: 0.14 }}
-            className="absolute left-0 right-0 top-full z-30 mt-1.5 overflow-hidden rounded-xl border border-line bg-surface p-1.5 shadow-pop"
-          >
-            <div className="px-2.5 py-2">
-              <p className="truncate text-[13px] font-semibold text-ink">{user?.name}</p>
-              <p className="truncate text-[12px] text-ink-soft">{user?.email}</p>
-            </div>
-            <div className="my-1 h-px bg-line" />
-            <button
-              onClick={() => {
-                setOpen(false);
-                logout();
-                navigate('/login');
-              }}
-              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium text-ink transition-colors hover:bg-white/[0.06]"
-            >
-              <LogOut className="h-4 w-4 text-ink-soft" />
-              Sign out
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
   );
 }
 
@@ -184,7 +128,7 @@ function SidebarContent({ onNavigate }) {
 
       {/* Workspace */}
       <div className="px-3">
-        <WorkspacePill />
+        <WorkspaceSwitcher />
       </div>
 
       {/* Nav */}

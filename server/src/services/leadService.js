@@ -55,6 +55,7 @@ async function findOrInitLead(agent, sessionId) {
   if (!lead) {
     lead = new Lead({
       userId: agent.userId,
+      workspaceId: agent.workspaceId || null,
       agentId: agent._id,
       agentName: agent.name,
       publicId: agent.publicId,

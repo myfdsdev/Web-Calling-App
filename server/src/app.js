@@ -5,6 +5,8 @@ import morgan from 'morgan';
 import { env } from './config/env.js';
 import { notFound, errorHandler } from './middleware/error.js';
 import authRoutes from './routes/authRoutes.js';
+import workspaceRoutes from './routes/workspaceRoutes.js';
+import inviteRoutes from './routes/inviteRoutes.js';
 import agentBuilderRoutes from './routes/agentBuilderRoutes.js';
 import agentRoutes from './routes/agentRoutes.js';
 import leadRoutes from './routes/leadRoutes.js';
@@ -36,6 +38,8 @@ export function createApp() {
   );
 
   app.use('/api/auth', authRoutes);
+  app.use('/api/workspaces', workspaceRoutes);
+  app.use('/api/invites', inviteRoutes);
   app.use('/api/agent-builder', agentBuilderRoutes);
   app.use('/api/agents', agentRoutes);
   app.use('/api/leads', leadRoutes);
