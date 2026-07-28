@@ -45,7 +45,7 @@ export function HeroBanner() {
         <div className="max-w-xl">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-semibold text-ink">
             <Sparkles className="h-3.5 w-3.5" />
-            AI Agent Builder
+            AI Web Agent Builder
           </span>
           <h2 className="mt-4 text-[24px] font-bold leading-tight text-ink md:text-[28px]">
             Build your next voice agent through conversation
