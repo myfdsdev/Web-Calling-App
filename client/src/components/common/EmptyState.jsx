@@ -28,7 +28,7 @@ export function EmptyState({ icon, title, description, action, className }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
       className={cn(
-        'flex flex-col items-center justify-center rounded-2xl border border-dashed border-line bg-white/60 px-6 py-14 text-center',
+        'flex flex-col items-center justify-center rounded-2xl border border-dashed border-line bg-white/5 px-6 py-14 text-center',
         className
       )}
     >
