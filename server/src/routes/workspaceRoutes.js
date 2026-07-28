@@ -15,6 +15,7 @@ import {
   inviteMember,
   revokeInvite,
 } from '../controllers/workspaceController.js';
+import { getApiKeys, updateApiKeys, deleteApiKey } from '../controllers/apiKeysController.js';
 
 const router = Router();
 
@@ -49,6 +50,16 @@ router.delete(
   withWorkspaceParam,
   requirePermission('members:invite'),
   revokeInvite
+);
+
+// ── BYOK API keys (owner/admin only) ──
+router.get('/:workspaceId/api-keys', withWorkspaceParam, requirePermission('apikeys:read'), getApiKeys);
+router.put('/:workspaceId/api-keys', withWorkspaceParam, requirePermission('apikeys:manage'), updateApiKeys);
+router.delete(
+  '/:workspaceId/api-keys/:provider',
+  withWorkspaceParam,
+  requirePermission('apikeys:manage'),
+  deleteApiKey
 );
 
 export default router;

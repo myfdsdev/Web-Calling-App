@@ -96,6 +96,12 @@ export function useAgentBuilder() {
         setPhase((p) => (p === 'loading' ? 'chat' : p));
       }
     } catch (err) {
+      // The workspace hasn't configured its own API keys yet (strict BYOK) — show
+      // a "configure your keys" prompt instead of a generic error.
+      if (err.code === 'VAPI_NOT_CONFIGURED') {
+        setPhase('needs-keys');
+        return;
+      }
       toast.error(err.normalizedMessage || 'Could not start the agent builder.');
       setPhase('error');
     }

@@ -2,11 +2,12 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
-import { Check, ChevronsUpDown, Plus, Users, LogOut, Building2 } from 'lucide-react';
+import { Check, ChevronsUpDown, Plus, Users, LogOut, Building2, KeyRound } from 'lucide-react';
 import { cn } from '../../lib/cn.js';
 import { useAuthStore } from '../../stores/authStore.js';
 import { useWorkspaceStore } from '../../stores/workspaceStore.js';
 import { useCreateWorkspace } from '../../hooks/useWorkspaces.js';
+import { ApiKeysDialog } from '../settings/ApiKeysDialog.jsx';
 import { Dialog, DialogClose } from '../ui/Dialog.jsx';
 import { Input } from '../ui/Input.jsx';
 import { Button } from '../ui/Button.jsx';
@@ -87,11 +88,13 @@ export function WorkspaceSwitcher() {
 
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [apiKeysOpen, setApiKeysOpen] = useState(false);
   const ref = useRef(null);
   const navigate = useNavigate();
   const qc = useQueryClient();
 
   const active = workspaces.find((w) => w.id === activeId) || workspaces[0] || null;
+  const canManageKeys = Boolean(active?.permissions?.includes('apikeys:manage'));
 
   useEffect(() => {
     const onClick = (e) => ref.current && !ref.current.contains(e.target) && setOpen(false);
@@ -186,6 +189,18 @@ export function WorkspaceSwitcher() {
               <Users className="h-4 w-4 text-ink-soft" />
               Manage team
             </button>
+            {canManageKeys && (
+              <button
+                onClick={() => {
+                  setOpen(false);
+                  setApiKeysOpen(true);
+                }}
+                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium text-ink transition-colors hover:bg-white/[0.06]"
+              >
+                <KeyRound className="h-4 w-4 text-ink-soft" />
+                API keys
+              </button>
+            )}
 
             <div className="my-1 h-px bg-line" />
 
@@ -209,6 +224,14 @@ export function WorkspaceSwitcher() {
       </AnimatePresence>
 
       <CreateWorkspaceDialog open={creating} onClose={() => setCreating(false)} />
+      {active && (
+        <ApiKeysDialog
+          open={apiKeysOpen}
+          onClose={() => setApiKeysOpen(false)}
+          workspaceId={active.id}
+          canManage={canManageKeys}
+        />
+      )}
     </div>
   );
 }

@@ -1,18 +1,22 @@
 import { Agent } from '../models/Agent.js';
 import { ok } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { env, vapiEnabled } from '../config/env.js';
+import { env } from '../config/env.js';
 import { creditsForCallSeconds } from '../config/plans.js';
 import { spend } from '../services/creditService.js';
+import { resolveVapiConfig } from '../services/apiKeyService.js';
 
 /**
  * GET /api/vapi/config
- * Returns browser-safe web-calling config. NEVER returns the private key.
+ * Browser-safe web-calling config for the ACTIVE workspace (BYOK-aware).
+ * NEVER returns the private key.
  */
 export const config = asyncHandler(async (req, res) => {
+  const vapiConfig = await resolveVapiConfig(req.workspaceId);
   return ok(res, {
-    configured: vapiEnabled(),
-    publicKey: env.vapi.publicKey || '',
+    configured: Boolean(vapiConfig.publicKey),
+    publicKey: vapiConfig.publicKey || '',
+    byo: vapiConfig.isByo,
   });
 });
 
@@ -73,9 +77,11 @@ export const webhook = asyncHandler(async (req, res) => {
           agent.stats.lastCallAt = new Date();
           await agent.save();
 
-          // Bill the owner for the call. It already happened, so if the balance
-          // is short we drain what's left rather than skipping the charge.
-          const cost = creditsForCallSeconds(seconds);
+          // BYOK: if the workspace runs on its own Vapi account, the user already
+          // paid Vapi directly — the app charges no credits. Only meter the
+          // system-key path (where the app fronts the cost).
+          const vapiConfig = await resolveVapiConfig(agent.workspaceId);
+          const cost = vapiConfig.isByo ? 0 : creditsForCallSeconds(seconds);
           if (cost > 0) {
             const details = {
               source: 'call',

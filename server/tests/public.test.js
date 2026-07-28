@@ -16,12 +16,12 @@ describe('Public agent page & customization', () => {
     return res.body.data.agent;
   }
 
-  it('assigns a public share id on creation', async () => {
+  it('assigns a public share id on creation and publishes by default', async () => {
     const user = await makeUser();
     const agent = await createAgent(user);
     expect(agent.publicId).toBeTruthy();
     expect(agent.publicId).toMatch(/^[a-z0-9]{10}$/);
-    expect(agent.isPublic).toBe(false); // private by default
+    expect(agent.isPublic).toBe(true); // a live page exists as soon as the agent is created
   });
 
   it('does NOT call Vapi when only appearance/publish fields change', async () => {
@@ -40,6 +40,8 @@ describe('Public agent page & customization', () => {
   it('hides an unpublished agent from the public endpoint', async () => {
     const user = await makeUser();
     const agent = await createAgent(user, 'asst_hidden');
+    // Agents publish by default now — explicitly unpublish to test the hiding.
+    await user.bearer(request(app).patch(`/api/agents/${agent.id}`)).send({ isPublic: false });
     const res = await request(app).get(`/api/public/agents/${agent.publicId}`); // no auth
     expect(res.status).toBe(404);
   });

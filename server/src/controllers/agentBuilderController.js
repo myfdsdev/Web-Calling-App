@@ -35,6 +35,7 @@ import {
 import { getPlan } from '../config/plans.js';
 import { getAccount } from '../services/creditService.js';
 import { buildAssistantPayload, createAssistant } from '../services/vapiAssistantService.js';
+import { resolveVapiConfig, resolveGeminiConfig } from '../services/apiKeyService.js';
 
 const REVIEW_MESSAGE =
   "That's everything I need! I've put together a summary of your agent. Review the details and, when you're happy, create your voice agent.";
@@ -44,7 +45,7 @@ function reviewUi() {
 }
 
 /** Build the assistant message payload for the draft's current position. */
-async function assistantForCurrent(draft, ackPrefix = '') {
+async function assistantForCurrent(draft, ackPrefix = '', gemini) {
   if (draft.currentStep > TOTAL_STEPS) {
     return { content: REVIEW_MESSAGE, stepKey: 'review', structuredData: { ui: reviewUi() } };
   }
@@ -55,7 +56,7 @@ async function assistantForCurrent(draft, ackPrefix = '') {
   // Business type: infer likely categories from the business name so the user
   // confirms a tailored guess instead of scanning a generic list.
   if (step.stepKey === 'businessType' && draft.businessName) {
-    const suggested = await suggestBusinessTypes(draft.businessName).catch(() => null);
+    const suggested = await suggestBusinessTypes(draft.businessName, gemini).catch(() => null);
     if (suggested) {
       question = `“${draft.businessName}” looks like a ${suggested.guess} business — is that right? Pick the closest match:`;
       ui = {
@@ -90,6 +91,20 @@ function splitLanguages(value) {
  */
 export const start = asyncHandler(async (req, res) => {
   const userId = req.user.id;
+
+  // BYOK gate: you can't build an agent without a Vapi key to create it on. Fail
+  // fast here so the chatbot never even opens until the workspace is configured.
+  // (Non-strict/dev falls back to the system key, so this only bites real BYOK.)
+  const vapi = await resolveVapiConfig(req.workspaceId);
+  if (!vapi.privateKey) {
+    throw new AppError(
+      'Add your Vapi API key in Workspace → API keys to start building agents.',
+      503,
+      'VAPI_NOT_CONFIGURED'
+    );
+  }
+
+  const gemini = await resolveGeminiConfig(req.workspaceId);
   const { draftId: requestedId } = startSchema.parse(req.body || {});
 
   let draft = null;
@@ -126,7 +141,7 @@ export const start = asyncHandler(async (req, res) => {
       completionPercentage: 5,
       status: 'draft',
     });
-    const first = await assistantForCurrent(draft);
+    const first = await assistantForCurrent(draft, '', gemini);
     await addMessage(draft, userId, 'assistant', first.content, first.stepKey, first.structuredData);
   }
 
@@ -140,7 +155,7 @@ export const start = asyncHandler(async (req, res) => {
     messages: messages.map((m) => m.toJSONView()),
     assistantMessage: messages.length
       ? messages[messages.length - 1].toJSONView()
-      : await assistantForCurrent(draft),
+      : await assistantForCurrent(draft, '', gemini),
   });
 });
 
@@ -151,6 +166,7 @@ export const start = asyncHandler(async (req, res) => {
 export const message = asyncHandler(async (req, res) => {
   const body = messageSchema.parse(req.body);
   const userId = req.user.id;
+  const gemini = await resolveGeminiConfig(req.workspaceId);
   const draft = await getOwnedDraft(body.draftId, userId);
 
   if (['creating', 'created'].includes(draft.status)) {
@@ -170,7 +186,7 @@ export const message = asyncHandler(async (req, res) => {
     case 'text': {
       const raw = (body.message || (Array.isArray(body.value) ? '' : body.value) || '').trim();
       if (!raw) throw new AppError('Please type an answer.', 422, 'EMPTY_ANSWER');
-      const { extractedValue } = await extractAnswer({ stepKey: targetStep.stepKey, rawInput: raw, draft });
+      const { extractedValue } = await extractAnswer({ stepKey: targetStep.stepKey, rawInput: raw, draft, gemini });
       fieldUpdate[targetStep.field] = extractedValue;
       userEcho = raw;
       break;
@@ -178,7 +194,7 @@ export const message = asyncHandler(async (req, res) => {
     case 'textarea': {
       const raw = (body.message || '').trim();
       if (!raw) throw new AppError('Please describe your services.', 422, 'EMPTY_ANSWER');
-      const { extractedValue } = await extractAnswer({ stepKey: 'services', rawInput: raw, draft });
+      const { extractedValue } = await extractAnswer({ stepKey: 'services', rawInput: raw, draft, gemini });
       fieldUpdate.services = Array.isArray(extractedValue) ? extractedValue : normalizeServices(extractedValue);
       userEcho = raw;
       break;
@@ -235,7 +251,7 @@ export const message = asyncHandler(async (req, res) => {
   // Advance only when answering the current step in-sequence.
   let ackPrefix = '';
   if (!isEditingPast && targetStep.step === draft.currentStep) {
-    const { assistantAck } = await extractAnswer({ stepKey: targetStep.stepKey, rawInput: userEcho, draft }).catch(
+    const { assistantAck } = await extractAnswer({ stepKey: targetStep.stepKey, rawInput: userEcho, draft, gemini }).catch(
       () => ({ assistantAck: 'Got it.' })
     );
     ackPrefix = assistantAck || 'Got it.';
@@ -253,7 +269,7 @@ export const message = asyncHandler(async (req, res) => {
 
   const assistant = isEditingPast
     ? { content: ackPrefix, stepKey: targetStep.stepKey, structuredData: { ui: reviewUi() } }
-    : await assistantForCurrent(draft, draft.currentStep > TOTAL_STEPS ? '' : ackPrefix);
+    : await assistantForCurrent(draft, draft.currentStep > TOTAL_STEPS ? '' : ackPrefix, gemini);
 
   // When we've just crossed into review, prepend the ack to the review message.
   if (!isEditingPast && draft.currentStep > TOTAL_STEPS && ackPrefix) {
@@ -333,14 +349,16 @@ export const deleteDraft = asyncHandler(async (req, res) => {
 export const generateGreetingRoute = asyncHandler(async (req, res) => {
   const draft = await getOwnedDraft(req.params.draftId, req.user.id);
   generateGreetingSchema.parse(req.body || {});
-  const firstMessage = await generateGreeting(draft);
+  const gemini = await resolveGeminiConfig(req.workspaceId);
+  const firstMessage = await generateGreeting(draft, gemini);
   return ok(res, { firstMessage }, 'Greeting generated.');
 });
 
 /** POST /api/agent-builder/drafts/:draftId/generate-prompt */
 export const generatePromptRoute = asyncHandler(async (req, res) => {
   const draft = await getOwnedDraft(req.params.draftId, req.user.id);
-  const systemPrompt = await generateSystemPrompt(draft);
+  const gemini = await resolveGeminiConfig(req.workspaceId);
+  const systemPrompt = await generateSystemPrompt(draft, gemini);
   draft.generatedSystemPrompt = systemPrompt;
   await draft.save();
   return ok(res, { generatedSystemPrompt: systemPrompt }, 'System prompt generated.');
@@ -353,7 +371,8 @@ export const review = asyncHandler(async (req, res) => {
     throw new AppError('Some required details are still missing.', 422, 'INCOMPLETE_DRAFT');
   }
   if (!draft.generatedSystemPrompt) {
-    draft.generatedSystemPrompt = await generateSystemPrompt(draft);
+    const gemini = await resolveGeminiConfig(req.workspaceId);
+    draft.generatedSystemPrompt = await generateSystemPrompt(draft, gemini);
   }
   if (draft.status === 'draft' || draft.status === 'ready-for-review') {
     draft.status = 'ready-for-review';
@@ -417,11 +436,14 @@ export const createVapiAgent = asyncHandler(async (req, res) => {
       throw new AppError('Some required details are missing.', 422, 'INCOMPLETE_DRAFT');
     }
     if (!draft.generatedSystemPrompt) {
-      draft.generatedSystemPrompt = await generateSystemPrompt(draft);
+      const gemini = await resolveGeminiConfig(req.workspaceId);
+      draft.generatedSystemPrompt = await generateSystemPrompt(draft, gemini);
     }
 
     const payload = buildAssistantPayload(draft);
-    const assistant = await createAssistant(payload);
+    // Create the assistant on THIS workspace's Vapi account (BYOK).
+    const vapiConfig = await resolveVapiConfig(req.workspaceId);
+    const assistant = await createAssistant(payload, vapiConfig);
 
     const agent = await Agent.create({
       // Billing account = workspace owner; `createdByUserId` records the builder.
@@ -444,6 +466,9 @@ export const createVapiAgent = asyncHandler(async (req, res) => {
       escalationInstructions: draft.escalationInstructions,
       vapiAssistantId: assistant.id,
       status: 'active',
+      // Publish the shareable page immediately so every new agent has a live
+      // page by default (the owner can unpublish it later).
+      isPublic: true,
       createdFromDraftId: draft._id,
     });
 

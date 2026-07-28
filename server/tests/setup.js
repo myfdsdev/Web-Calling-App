@@ -13,6 +13,9 @@ process.env.VAPI_WEBHOOK_SECRET = '';
 // GEMINI_API_KEY in the developer's .env (loaded by dotenv) makes extraction hit
 // the live API and return nondeterministic results (e.g. re-cased service names).
 process.env.GEMINI_API_KEY = '';
+// Tests exercise the SYSTEM-key path (credits, mocked Vapi), so opt out of strict
+// BYOK here. Production defaults to strict (system keys ignored).
+process.env.REQUIRE_BYOK = 'false';
 
 jest.setTimeout(30000);
 

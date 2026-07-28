@@ -25,3 +25,16 @@ export const inviteSchema = z.object({
 export const updateMemberSchema = z.object({
   role: z.enum(ASSIGNABLE_ROLES),
 });
+
+/**
+ * BYOK keys. Every field is optional so the client can patch one provider at a
+ * time; an empty string explicitly clears that key. Undefined leaves it as-is.
+ */
+export const saveApiKeysSchema = z
+  .object({
+    vapiPrivateKey: z.string().trim().max(300).optional(),
+    vapiPublicKey: z.string().trim().max(300).optional(),
+    geminiApiKey: z.string().trim().max(300).optional(),
+    geminiModel: z.string().trim().max(80).optional(),
+  })
+  .strict();

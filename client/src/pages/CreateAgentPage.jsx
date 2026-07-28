@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Rocket, AlertTriangle } from 'lucide-react';
+import { Rocket, AlertTriangle, KeyRound } from 'lucide-react';
 import { useAgentBuilder } from '../hooks/useAgentBuilder.js';
+import { useActiveWorkspace } from '../hooks/useWorkspaces.js';
+import { ApiKeysDialog } from '../components/settings/ApiKeysDialog.jsx';
 import { BuilderHeader } from '../components/builder/BuilderHeader.jsx';
 import { BuilderProgress } from '../components/builder/BuilderProgress.jsx';
 import { BuildAgentWelcome } from '../components/builder/BuildAgentWelcome.jsx';
@@ -20,11 +22,13 @@ export default function CreateAgentPage() {
   const navigate = useNavigate();
   const builder = useAgentBuilder();
   const { phase, draft, progress, saveState } = builder;
+  const activeWorkspace = useActiveWorkspace();
   const [createdAgent, setCreatedAgent] = useState(null);
   const [welcomeBusy, setWelcomeBusy] = useState(false);
   const [manualMode, setManualMode] = useState(false);
   const [manualSubmitting, setManualSubmitting] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [keysOpen, setKeysOpen] = useState(false);
 
   // The popup IS the conversation: it stays open for the whole chat phase and
   // only closes when the user skips to the form or the flow reaches review.
@@ -93,6 +97,55 @@ export default function CreateAgentPage() {
   };
 
   if (phase === 'loading') return <FullPageLoader inline label="Preparing your agent builder…" />;
+
+  // Strict BYOK: the workspace has no Vapi key yet, so building is blocked until
+  // the owner/admin configures the workspace's own API keys.
+  if (phase === 'needs-keys') {
+    const canManageKeys = Boolean(activeWorkspace?.permissions?.includes('apikeys:manage'));
+    return (
+      <div className="mx-auto max-w-content px-4 py-16 sm:px-6 lg:px-8">
+        <Card className="mx-auto max-w-md p-8 text-center">
+          <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-soft text-primary">
+            <KeyRound className="h-7 w-7" />
+          </span>
+          <h2 className="text-section font-bold text-ink">Add your API keys to build agents</h2>
+          <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+            Vox runs on your own Vapi &amp; Gemini accounts. Configure this workspace’s keys and the
+            agent builder will open right up.
+          </p>
+          <div className="mt-6 flex items-center justify-center gap-2">
+            <Button variant="secondary" onClick={() => navigate('/agents')}>
+              Back
+            </Button>
+            {canManageKeys ? (
+              <Button onClick={() => setKeysOpen(true)}>
+                <KeyRound className="h-4 w-4" />
+                Add API keys
+              </Button>
+            ) : null}
+          </div>
+          {!canManageKeys && (
+            <p className="mt-4 text-xs text-ink-faint">
+              Ask the workspace owner or an admin to add the API keys.
+            </p>
+          )}
+        </Card>
+
+        {activeWorkspace && (
+          <ApiKeysDialog
+            open={keysOpen}
+            // Re-open the builder once keys are saved by reloading the page.
+            onClose={() => {
+              setKeysOpen(false);
+              window.location.reload();
+            }}
+            workspaceId={activeWorkspace.id}
+            canManage={canManageKeys}
+          />
+        )}
+      </div>
+    );
+  }
 
   if (phase === 'error') {
     return (

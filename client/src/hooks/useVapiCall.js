@@ -37,8 +37,10 @@ function readVapiError(e) {
 
 /**
  * Browser web-calling via the Vapi Web SDK (@vapi-ai/web).
- * Uses ONLY the public key (from env or the backend /vapi/config endpoint) —
- * the private key never touches the browser.
+ * Uses ONLY the public key that belongs to the active WORKSPACE — supplied
+ * directly (public page) or fetched from the backend /vapi/config endpoint
+ * (which resolves the workspace's own key). There is deliberately no build-time
+ * env fallback, so the system key can never be used from the browser (BYOK).
  *
  * status: idle | connecting | active | ended | error
  */
@@ -53,8 +55,8 @@ export function useVapiCall(options = {}) {
 
   const vapiRef = useRef(null);
   const timerRef = useRef(null);
-  // Prefer an explicitly provided key (e.g. the public page), else the build-time env key.
-  const publicKeyRef = useRef(providedKey || import.meta.env.VITE_VAPI_PUBLIC_KEY || '');
+  // Only a workspace-provided key — never a build-time system key (BYOK).
+  const publicKeyRef = useRef(providedKey || '');
 
   // Keep the ref in sync if the provided key arrives asynchronously.
   useEffect(() => {
@@ -143,7 +145,7 @@ export function useVapiCall(options = {}) {
       const key = await resolveKey();
       if (!key) {
         setErrorMessage(
-          'Web calling isn’t configured. Add your Vapi public key (VITE_VAPI_PUBLIC_KEY) to enable test calls.'
+          'Web calling isn’t configured for this workspace. Add your Vapi keys in Workspace → API keys to enable calls.'
         );
         setStatus('error');
         return;

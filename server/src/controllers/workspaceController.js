@@ -26,7 +26,7 @@ import {
 import { permissionsFor, ROLE_CATALOGUE, ROLE_RANK } from '../config/roles.js';
 import { getPlan } from '../config/plans.js';
 import { deleteAssistant } from '../services/vapiAssistantService.js';
-import { vapiEnabled } from '../config/env.js';
+import { resolveVapiConfig, deleteWorkspaceKeys } from '../services/apiKeyService.js';
 
 /** Everything the client needs to render one workspace and gate its UI. */
 async function workspaceView(workspace, role) {
@@ -84,11 +84,12 @@ export const deleteWorkspace = asyncHandler(async (req, res) => {
   }
 
   const agents = await Agent.find({ workspaceId: workspace._id });
-  if (vapiEnabled()) {
+  const vapiConfig = await resolveVapiConfig(workspace._id);
+  if (vapiConfig.privateKey) {
     for (const agent of agents) {
       if (!agent.vapiAssistantId) continue;
       try {
-        await deleteAssistant(agent.vapiAssistantId);
+        await deleteAssistant(agent.vapiAssistantId, vapiConfig);
       } catch {
         // Already gone upstream, or a transient failure — local cleanup continues.
       }
@@ -103,6 +104,7 @@ export const deleteWorkspace = asyncHandler(async (req, res) => {
     AgentBuilderMessage.deleteMany({ draftId: { $in: drafts.map((d) => d._id) } }),
     WorkspaceMember.deleteMany({ workspaceId: workspace._id }),
     WorkspaceInvite.deleteMany({ workspaceId: workspace._id }),
+    deleteWorkspaceKeys(workspace._id),
   ]);
   await workspace.deleteOne();
 

@@ -1,4 +1,4 @@
-import { env, vapiEnabled } from '../config/env.js';
+import { env } from '../config/env.js';
 import { MODEL_CONFIG, TRANSCRIBER_CONFIG, isSupportedVoice } from '../config/voices.js';
 import { AppError } from '../utils/apiResponse.js';
 
@@ -65,10 +65,19 @@ function sanitizeVapiError(status, body) {
   return { status: status || 502, message };
 }
 
-async function vapiRequest(method, path, body) {
-  if (!vapiEnabled()) {
+/**
+ * `vapiConfig` = { privateKey, baseUrl } for the workspace whose account this
+ * request runs on (see apiKeyService.resolveVapiConfig). Falls back to the
+ * system env key ONLY when no config is passed, so internal/legacy callers and
+ * tests keep working.
+ */
+async function vapiRequest(method, path, body, vapiConfig) {
+  const privateKey = vapiConfig?.privateKey ?? env.vapi.privateKey;
+  const baseUrl = vapiConfig?.baseUrl || env.vapi.baseUrl;
+
+  if (!privateKey) {
     throw new AppError(
-      'Voice platform is not configured on the server (missing VAPI_PRIVATE_API_KEY).',
+      'No Vapi API key is configured for this workspace. Add your Vapi private key in API settings.',
       503,
       'VAPI_NOT_CONFIGURED'
     );
@@ -76,10 +85,10 @@ async function vapiRequest(method, path, body) {
 
   let res;
   try {
-    res = await fetch(`${env.vapi.baseUrl}${path}`, {
+    res = await fetch(`${baseUrl}${path}`, {
       method,
       headers: {
-        Authorization: `Bearer ${env.vapi.privateKey}`,
+        Authorization: `Bearer ${privateKey}`,
         'Content-Type': 'application/json',
       },
       body: body ? JSON.stringify(body) : undefined,
@@ -104,22 +113,22 @@ async function vapiRequest(method, path, body) {
   return parsed;
 }
 
-export async function createAssistant(payload) {
-  const data = await vapiRequest('POST', '/assistant', payload);
+export async function createAssistant(payload, vapiConfig) {
+  const data = await vapiRequest('POST', '/assistant', payload, vapiConfig);
   if (!data || !data.id) {
     throw new AppError('Voice platform did not return an assistant id.', 502, 'VAPI_BAD_RESPONSE');
   }
   return data;
 }
 
-export async function updateAssistant(assistantId, payload) {
-  return vapiRequest('PATCH', `/assistant/${assistantId}`, payload);
+export async function updateAssistant(assistantId, payload, vapiConfig) {
+  return vapiRequest('PATCH', `/assistant/${assistantId}`, payload, vapiConfig);
 }
 
-export async function deleteAssistant(assistantId) {
-  return vapiRequest('DELETE', `/assistant/${assistantId}`);
+export async function deleteAssistant(assistantId, vapiConfig) {
+  return vapiRequest('DELETE', `/assistant/${assistantId}`, vapiConfig);
 }
 
-export async function getAssistant(assistantId) {
-  return vapiRequest('GET', `/assistant/${assistantId}`);
+export async function getAssistant(assistantId, vapiConfig) {
+  return vapiRequest('GET', `/assistant/${assistantId}`, vapiConfig);
 }

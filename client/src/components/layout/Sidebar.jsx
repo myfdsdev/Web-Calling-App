@@ -9,13 +9,10 @@ import {
   Zap,
   Plus,
   Search,
-  LogOut,
-  Settings,
   Menu,
   X,
 } from 'lucide-react';
 import { cn } from '../../lib/cn.js';
-import { useAuthStore } from '../../stores/authStore.js';
 import { useMyBilling } from '../../hooks/useBilling.js';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher.jsx';
 
@@ -107,7 +104,6 @@ function SectionLabel({ children }) {
 
 function SidebarContent({ onNavigate }) {
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
 
   return (
     <div className="flex h-full flex-col">
@@ -141,34 +137,11 @@ function SidebarContent({ onNavigate }) {
 
         <SectionLabel>Create</SectionLabel>
         <NavItem to="/agents/create" label="New Agent" icon={Plus} onNavigate={onNavigate} />
-
-        <div className="mt-4">
-          <CreditChip onNavigate={onNavigate} />
-        </div>
       </nav>
 
-      {/* Footer */}
+      {/* Footer: live credit balance pinned to the bottom */}
       <div className="border-t border-line p-3">
-        <div className="flex items-center gap-2.5 rounded-lg px-1.5 py-1.5">
-          <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-white/10 text-[12px] font-bold text-ink">
-            {(user?.name || 'U').slice(0, 1).toUpperCase()}
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[13px] font-semibold text-ink">{user?.name}</p>
-            <p className="truncate text-[11px] text-ink-soft">{user?.email}</p>
-          </div>
-          <button
-            onClick={() => {
-              logout();
-              navigate('/login');
-            }}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft transition-colors hover:bg-white/[0.06] hover:text-ink focus-ring"
-            aria-label="Sign out"
-            title="Sign out"
-          >
-            <Settings className="h-4 w-4" />
-          </button>
-        </div>
+        <CreditChip onNavigate={onNavigate} />
       </div>
     </div>
   );

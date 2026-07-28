@@ -10,7 +10,8 @@ import { SUPPORTED_VOICES, getVoiceById } from '../config/voices.js';
 import { buildSystemPrompt } from '../services/agentPromptService.js';
 import { generateSystemPrompt } from '../services/geminiAgentBuilderService.js';
 import { buildAssistantPayload, updateAssistant, deleteAssistant } from '../services/vapiAssistantService.js';
-import { env, vapiEnabled } from '../config/env.js';
+import { resolveVapiConfig, resolveGeminiConfig } from '../services/apiKeyService.js';
+import { env } from '../config/env.js';
 import { genPublicId } from '../utils/ids.js';
 
 /** An agent is accessible to everyone in its workspace — scope by that, not the caller. */
@@ -128,7 +129,8 @@ export const updateAgent = asyncHandler(async (req, res) => {
   if (!agent.publicId) agent.publicId = genPublicId();
 
   if (touchesVapi) {
-    // Regenerate the system prompt from the updated details.
+    // Regenerate the system prompt from the updated details (workspace's Gemini key).
+    const gemini = await resolveGeminiConfig(req.workspaceId);
     agent.systemPrompt = await generateSystemPrompt({
       agentName: agent.name,
       businessName: agent.businessName,
@@ -138,7 +140,7 @@ export const updateAgent = asyncHandler(async (req, res) => {
       tone: agent.tone,
       languages: agent.languages,
       escalationInstructions: agent.escalationInstructions,
-    }).catch(() =>
+    }, gemini).catch(() =>
       buildSystemPrompt({
         agentName: agent.name,
         businessName: agent.businessName,
@@ -152,8 +154,10 @@ export const updateAgent = asyncHandler(async (req, res) => {
       })
     );
 
-    // Update Vapi first (preserving the existing assistant id); save locally only on success.
-    if (agent.vapiAssistantId && vapiEnabled()) {
+    // Update the assistant on the workspace's Vapi account (preserving its id);
+    // save locally only on success.
+    const vapiConfig = await resolveVapiConfig(req.workspaceId);
+    if (agent.vapiAssistantId && vapiConfig.privateKey) {
       const payload = buildAssistantPayload({
         name: agent.name,
         firstMessage: agent.firstMessage,
@@ -161,7 +165,7 @@ export const updateAgent = asyncHandler(async (req, res) => {
         voiceProvider: agent.voiceProvider,
         voiceId: agent.voiceId,
       });
-      await updateAssistant(agent.vapiAssistantId, payload);
+      await updateAssistant(agent.vapiAssistantId, payload, vapiConfig);
     }
   }
 
@@ -180,11 +184,16 @@ export const getPublicAgent = asyncHandler(async (req, res) => {
   if (!agent || !agent.isPublic || agent.status === 'disabled') {
     throw new AppError('This voice agent is not available.', 404, 'AGENT_NOT_AVAILABLE');
   }
-  // Voice calls are only offered while the owner can afford at least a minute.
-  const callsEnabled = await canAfford(agent.userId, VOICE_CREDITS_PER_MINUTE);
+  // Use the agent's workspace Vapi account (BYOK). Calls need a public key; when
+  // the workspace brings its own key the user pays Vapi directly so app credits
+  // don't gate — otherwise (system key) we still require an affordable minute.
+  const vapiConfig = await resolveVapiConfig(agent.workspaceId);
+  const callsEnabled =
+    Boolean(vapiConfig.publicKey) &&
+    (vapiConfig.isByo || (await canAfford(agent.userId, VOICE_CREDITS_PER_MINUTE)));
   return ok(res, {
     agent: agent.toPublicView(),
-    vapiPublicKey: env.vapi.publicKey || '',
+    vapiPublicKey: vapiConfig.publicKey || '',
     callsEnabled,
   });
 });
@@ -201,9 +210,16 @@ export const publicChat = asyncHandler(async (req, res) => {
   }
   const { messages, sessionId } = publicChatSchema.parse(req.body);
 
-  // Out of credits: still record the lead (the visitor engaged), but don't
-  // spend money generating a reply.
-  if (!(await canAfford(agent.userId, CHAT_CREDITS_PER_MESSAGE))) {
+  // BYOK: when the workspace brings its own Gemini key the visitor's chat runs on
+  // the owner's account — no app credits are charged or checked. Only the system-
+  // key path (the app pays) meters credits.
+  const gemini = await resolveGeminiConfig(agent.workspaceId);
+  const mustCharge = !gemini.isByo;
+
+  // Strict BYOK with no workspace Gemini key: there is nothing to generate a
+  // reply with (system keys are off), so the widget is unavailable — capture the
+  // lead but don't fabricate a canned answer.
+  if (env.requireByok && !gemini.enabled) {
     await captureChatLead({ agent, sessionId, messages });
     return ok(res, {
       reply: "Thanks for reaching out! I'm unavailable right now — please leave your details and the team will follow up.",
@@ -211,12 +227,23 @@ export const publicChat = asyncHandler(async (req, res) => {
     });
   }
 
-  const reply = await chatWithAgent(agent, messages);
-  await spend(agent.userId, CHAT_CREDITS_PER_MESSAGE, {
-    source: 'chat',
-    reason: 'Chat reply',
-    agentId: agent._id,
-  });
+  // System-key path with no balance: still record the lead, but don't spend to reply.
+  if (mustCharge && !(await canAfford(agent.userId, CHAT_CREDITS_PER_MESSAGE))) {
+    await captureChatLead({ agent, sessionId, messages });
+    return ok(res, {
+      reply: "Thanks for reaching out! I'm unavailable right now — please leave your details and the team will follow up.",
+      unavailable: true,
+    });
+  }
+
+  const reply = await chatWithAgent(agent, messages, gemini);
+  if (mustCharge) {
+    await spend(agent.userId, CHAT_CREDITS_PER_MESSAGE, {
+      source: 'chat',
+      reason: 'Chat reply',
+      agentId: agent._id,
+    });
+  }
   // Capture / update the lead for this chat session (never blocks the reply).
   await captureChatLead({ agent, sessionId, messages: [...messages, { role: 'assistant', content: reply }] });
   return ok(res, { reply });
@@ -244,9 +271,10 @@ export const publicCallLead = asyncHandler(async (req, res) => {
 export const deleteAgent = asyncHandler(async (req, res) => {
   const agent = await getWorkspaceAgent(req.params.agentId, req.workspaceId);
 
-  if (agent.vapiAssistantId && vapiEnabled()) {
+  const vapiConfig = await resolveVapiConfig(req.workspaceId);
+  if (agent.vapiAssistantId && vapiConfig.privateKey) {
     try {
-      await deleteAssistant(agent.vapiAssistantId);
+      await deleteAssistant(agent.vapiAssistantId, vapiConfig);
     } catch (err) {
       // If the assistant is already gone on Vapi's side, continue with local cleanup.
       if (!/not found|404/i.test(err?.message || '')) throw err;

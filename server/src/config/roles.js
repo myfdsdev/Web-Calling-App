@@ -45,6 +45,8 @@ export const ALL_PERMISSIONS = [
   'leads:write',
   'billing:read',
   'billing:manage',
+  'apikeys:read',
+  'apikeys:manage',
 ];
 
 const PERMISSIONS = {
@@ -60,6 +62,8 @@ const PERMISSIONS = {
     'leads:read',
     'leads:write',
     'billing:read',
+    'apikeys:read',
+    'apikeys:manage',
   ],
   member: [
     'workspace:read',

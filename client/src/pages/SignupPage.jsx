@@ -27,6 +27,8 @@ export default function SignupPage() {
     setError('');
     try {
       await register(form);
+      // Trigger the API-keys onboarding popup on the first authed screen.
+      localStorage.setItem('vox.justSignedUp', '1');
       toast.success('Account created — welcome to Vox!');
       goHome();
     } catch (err) {
@@ -40,6 +42,7 @@ export default function SignupPage() {
     setError('');
     try {
       await loginWithGoogle(credential);
+      localStorage.setItem('vox.justSignedUp', '1');
       toast.success('Welcome to Vox!');
       goHome();
     } catch (err) {

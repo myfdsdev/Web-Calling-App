@@ -10,9 +10,17 @@ async function main() {
     // eslint-disable-next-line no-console
     console.log(`\n🚀 API running on http://localhost:${env.port}`);
     // eslint-disable-next-line no-console
-    console.log(`   Gemini: ${geminiEnabled() ? 'enabled' : 'disabled (deterministic fallback)'}`);
+    console.log(
+      `   BYOK:   ${env.requireByok ? 'STRICT — every workspace must use its own keys (system keys ignored)' : 'off — system keys used as fallback'}`
+    );
     // eslint-disable-next-line no-console
-    console.log(`   Vapi:   ${vapiEnabled() ? 'enabled' : 'NOT configured (assistant creation will fail)'}\n`);
+    console.log(
+      `   Gemini system key: ${geminiEnabled() ? (env.requireByok ? 'set but IGNORED (strict BYOK)' : 'enabled') : 'not set'}`
+    );
+    // eslint-disable-next-line no-console
+    console.log(
+      `   Vapi system key:   ${vapiEnabled() ? (env.requireByok ? 'set but IGNORED (strict BYOK)' : 'enabled') : 'not set'}\n`
+    );
   });
 }
 

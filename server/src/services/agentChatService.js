@@ -2,12 +2,22 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { env, geminiEnabled } from '../config/env.js';
 import { buildSystemPrompt } from './agentPromptService.js';
 
-let client = null;
-function chatModel(systemInstruction) {
-  if (!geminiEnabled()) return null;
-  if (!client) client = new GoogleGenerativeAI(env.geminiApiKey);
+function systemGemini() {
+  return { apiKey: env.geminiApiKey, model: env.geminiModel, enabled: geminiEnabled() };
+}
+
+// One SDK client per distinct API key (workspaces may each bring their own).
+const clientCache = new Map();
+function chatModel(systemInstruction, gemini) {
+  const cfg = gemini || systemGemini();
+  if (!cfg.enabled || !cfg.apiKey) return null;
+  let client = clientCache.get(cfg.apiKey);
+  if (!client) {
+    client = new GoogleGenerativeAI(cfg.apiKey);
+    clientCache.set(cfg.apiKey, client);
+  }
   return client.getGenerativeModel({
-    model: env.geminiModel,
+    model: cfg.model || env.geminiModel,
     systemInstruction,
     generationConfig: { temperature: 0.7, maxOutputTokens: 500 },
   });
@@ -37,10 +47,10 @@ You are chatting with a website visitor over TEXT (not a phone call). Keep repli
  * `messages` is the running transcript: [{ role: 'user'|'assistant', content }].
  * Falls back to a friendly canned line when Gemini is unavailable.
  */
-export async function chatWithAgent(agent, messages) {
+export async function chatWithAgent(agent, messages, gemini) {
   const lastUser = [...messages].reverse().find((m) => m.role === 'user')?.content || '';
 
-  const model = chatModel(instructionFor(agent));
+  const model = chatModel(instructionFor(agent), gemini);
   if (!model) {
     return agent.firstMessage
       ? `${agent.firstMessage} (Live chat isn't fully set up yet — please start a voice call to talk to me.)`

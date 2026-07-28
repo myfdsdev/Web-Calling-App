@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect } from 'react';
 import { Routes, Route, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { Sidebar } from './components/layout/Sidebar.jsx';
+import { OnboardingApiKeys } from './components/settings/OnboardingApiKeys.jsx';
 import { useAuthStore } from './stores/authStore.js';
 import { useWorkspaceStore } from './stores/workspaceStore.js';
 import { FullPageLoader } from './components/common/FullPageLoader.jsx';
@@ -46,6 +47,7 @@ function ProtectedLayout() {
           </Suspense>
         </main>
       </div>
+      <OnboardingApiKeys />
     </div>
   );
 }

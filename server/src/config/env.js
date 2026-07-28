@@ -26,6 +26,16 @@ export const env = {
   jwtSecret: process.env.JWT_SECRET || 'dev-insecure-secret-change-me',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
 
+  // Secret used to encrypt stored API keys (BYOK) at rest. Falls back to the JWT
+  // secret so dev works out of the box; set a dedicated value in production.
+  encryptionKey: process.env.APP_ENCRYPTION_KEY || '',
+
+  // Strict BYOK (default ON): every workspace MUST use its own Vapi/Gemini keys —
+  // system env keys are IGNORED for serving requests (still allowed as a fallback
+  // only when this is explicitly false, e.g. in the test suite). This is what
+  // guarantees "the system's API is never used" even if the env keys are set.
+  requireByok: bool(process.env.REQUIRE_BYOK, true),
+
   googleClientId: process.env.GOOGLE_CLIENT_ID || '',
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
   googleCallbackUrl:
