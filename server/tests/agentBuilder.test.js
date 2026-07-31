@@ -72,8 +72,8 @@ describe('Agent Builder conversational flow', () => {
     expect(draft.languages).toEqual(['English', 'Hindi']);
     expect(draft.firstMessage).toMatch(/Green Valley/);
     // The user never picks a voice — a Hindi-speaking agent gets an Indian voice.
-    expect(draft.selectedVoiceId).toBe('Neha');
-    expect(draft.selectedVoiceName).toBe('Neha');
+    expect(draft.selectedVoiceId).toBe('Naina');
+    expect(draft.selectedVoiceName).toBe('Naina');
     expect(draft.completionPercentage).toBe(100);
   });
 

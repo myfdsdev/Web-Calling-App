@@ -213,16 +213,16 @@ export function pickVoiceForDraft(draft, voices) {
 
   let preferred;
   if (speaksHindi) {
-    preferred = tone.includes('energetic') || tone.includes('confident') ? 'rohan' : 'neha';
+    preferred = tone.includes('energetic') || tone.includes('confident') ? 'rohan' : 'naina';
   } else if (tone.includes('confident') || tone.includes('professional')) {
-    preferred = tone.includes('confident') ? 'harry' : 'paige';
+    preferred = 'savannah';
   } else if (tone.includes('energetic')) {
     preferred = 'rohan';
   } else {
-    preferred = 'ava'; // warm, friendly default
+    preferred = 'elliot'; // warm, friendly default
   }
 
-  return byId(preferred) || byId('ava') || voices[0];
+  return byId(preferred) || byId('elliot') || voices[0];
 }
 
 /** Split a free-text services answer into a clean array. */

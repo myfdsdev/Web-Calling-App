@@ -9,7 +9,7 @@ import {
   patchDraftSchema,
   generateGreetingSchema,
 } from '../validators/agentBuilderValidator.js';
-import { SUPPORTED_VOICES, getVoiceById } from '../config/voices.js';
+import { SUPPORTED_VOICES, getVoiceById, isSupportedVoice } from '../config/voices.js';
 import {
   FLOW,
   TOTAL_STEPS,
@@ -19,6 +19,7 @@ import {
   normalizeServices,
   isReadyForReview,
   isStepAnswered,
+  pickVoiceForDraft,
 } from '../services/builderFlow.js';
 import {
   getOwnedDraft,
@@ -435,6 +436,19 @@ export const createVapiAgent = asyncHandler(async (req, res) => {
     if (!isReadyForReview(draft)) {
       throw new AppError('Some required details are missing.', 422, 'INCOMPLETE_DRAFT');
     }
+
+    // Heal a draft whose auto-picked voice has since been retired by the provider
+    // (e.g. Vapi's legacy set — Paige/Neha/Harry…) so a saved draft can still be
+    // created instead of failing forever on an id Vapi no longer accepts.
+    if (!isSupportedVoice(draft.selectedVoiceProvider, draft.selectedVoiceId)) {
+      const voice = pickVoiceForDraft(draft, SUPPORTED_VOICES);
+      if (voice) {
+        draft.selectedVoiceProvider = voice.provider;
+        draft.selectedVoiceId = voice.voiceId;
+        draft.selectedVoiceName = voice.name;
+      }
+    }
+
     if (!draft.generatedSystemPrompt) {
       const gemini = await resolveGeminiConfig(req.workspaceId);
       draft.generatedSystemPrompt = await generateSystemPrompt(draft, gemini);

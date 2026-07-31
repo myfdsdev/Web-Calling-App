@@ -27,7 +27,7 @@ describe('Vapi integration (regression)', () => {
     expect(createCall.body.name).toBe('Emma');
     expect(createCall.body.firstMessage).toMatch(/Green Valley/);
     expect(createCall.body.voice.provider).toBe('vapi');
-    expect(createCall.body.voice.voiceId).toBe('Neha'); // auto-picked for a Hindi-speaking agent
+    expect(createCall.body.voice.voiceId).toBe('Naina'); // auto-picked for a Hindi-speaking agent
     expect(createCall.body.model.messages[0].role).toBe('system');
     expect(createCall.body.model.messages[0].content).toMatch(/Emma/);
     expect(createCall.body.server.url).toMatch(/\/api\/vapi\/webhook$/);
