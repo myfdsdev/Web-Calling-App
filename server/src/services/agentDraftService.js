@@ -7,9 +7,10 @@ import { SUPPORTED_VOICES } from '../config/voices.js';
 /** Load a draft and assert it belongs to the given user. */
 export async function getOwnedDraft(draftId, userId) {
   const draft = await AgentDraft.findById(draftId);
-  if (!draft) throw new AppError('Draft not found.', 404, 'DRAFT_NOT_FOUND');
-  if (draft.userId.toString() !== userId.toString()) {
-    throw new AppError('You do not have access to this draft.', 403, 'FORBIDDEN');
+  // A non-owner gets the SAME 404 as a missing draft on purpose: a 403 here would
+  // confirm the id exists and let someone enumerate other people's draft ids.
+  if (!draft || draft.userId.toString() !== userId.toString()) {
+    throw new AppError('Draft not found.', 404, 'DRAFT_NOT_FOUND');
   }
   return draft;
 }

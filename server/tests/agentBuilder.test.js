@@ -182,6 +182,8 @@ describe('Agent Builder conversational flow', () => {
     const start = await owner.bearer(request(app).post('/api/agent-builder/start'));
     const draftId = start.body.data.draftId;
     const res = await intruder.bearer(request(app).get(`/api/agent-builder/drafts/${draftId}`));
-    expect(res.status).toBe(403);
+    // 404 (not 403) — a non-owner must not be able to tell an existing draft id
+    // from a missing one, or draft ids could be enumerated.
+    expect(res.status).toBe(404);
   });
 });
