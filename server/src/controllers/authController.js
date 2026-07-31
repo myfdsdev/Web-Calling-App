@@ -3,7 +3,17 @@ import { User } from '../models/User.js';
 import { signToken } from '../middleware/auth.js';
 import { ok, fail, AppError } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { registerSchema, loginSchema, googleAuthSchema } from '../validators/agentValidator.js';
+import {
+  registerSchema,
+  loginSchema,
+  googleAuthSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+} from '../validators/agentValidator.js';
+import {
+  requestPasswordReset,
+  completePasswordReset,
+} from '../services/auth/passwordResetService.js';
 import { env, googleAuthEnabled } from '../config/env.js';
 
 let googleClient = null;
@@ -22,7 +32,7 @@ export const register = asyncHandler(async (req, res) => {
   await user.setPassword(password);
   await user.save();
 
-  const token = signToken(user._id);
+  const token = signToken(user);
   return ok(res, { token, user: user.toPublic() }, 'Account created.', 201);
 });
 
@@ -40,7 +50,7 @@ export const login = asyncHandler(async (req, res) => {
   const valid = await user.verifyPassword(password);
   if (!valid) return fail(res, 'Invalid email or password.', 401, 'INVALID_CREDENTIALS');
 
-  const token = signToken(user._id);
+  const token = signToken(user);
   return ok(res, { token, user: user.toPublic() }, 'Signed in.');
 });
 
@@ -99,7 +109,7 @@ export const googleAuth = asyncHandler(async (req, res) => {
     });
   }
 
-  const token = signToken(user._id);
+  const token = signToken(user);
   return ok(res, { token, user: user.toPublic() }, 'Signed in with Google.');
 });
 
@@ -107,4 +117,28 @@ export const me = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user.id);
   if (!user) return fail(res, 'User not found.', 404, 'USER_NOT_FOUND');
   return ok(res, { user: user.toPublic() });
+});
+
+/**
+ * POST /api/auth/forgot-password { email }
+ * Always returns the SAME 200 + message whether or not the address exists — the
+ * response must never reveal which emails have accounts. `sent` is deliberately
+ * NOT surfaced. In non-production a devLink is included only when no mail provider
+ * is configured, so local development can still complete the flow.
+ */
+export const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = forgotPasswordSchema.parse(req.body);
+  const { devLink } = await requestPasswordReset(email);
+  const message = 'If an account exists for that email, a reset link is on its way.';
+  return ok(res, devLink ? { devLink } : {}, message);
+});
+
+/**
+ * POST /api/auth/reset-password { token, password }
+ * Expired, spent and fabricated tokens all return the same error.
+ */
+export const resetPassword = asyncHandler(async (req, res) => {
+  const { token, password } = resetPasswordSchema.parse(req.body);
+  await completePasswordReset(token, password);
+  return ok(res, {}, 'Your password has been reset. Please sign in.');
 });
