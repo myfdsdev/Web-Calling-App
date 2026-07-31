@@ -23,6 +23,11 @@ const userSchema = new mongoose.Schema(
     // Optional: accounts created through Google sign-in have no password.
     passwordHash: { type: String, default: '', select: false },
 
+    // Bumped whenever every existing session must be invalidated (password reset).
+    // The value is embedded in the JWT as `tv`; a mismatch fails authentication,
+    // so a reset immediately kills any token issued before it.
+    tokenVersion: { type: Number, default: 0 },
+
     // Google sign-in
     googleId: { type: String, default: '', index: true },
     avatarUrl: { type: String, default: '' },

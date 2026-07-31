@@ -16,6 +16,18 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
+/** Start a password reset. Any string is accepted so the response can't be used
+ *  to tell a valid address from an invalid one. */
+export const forgotPasswordSchema = z.object({
+  email: z.string().min(1, 'Email is required').max(200),
+});
+
+/** Complete a password reset. Password policy matches registration (min 6). */
+export const resetPasswordSchema = z.object({
+  token: z.string().min(10, 'Missing reset token').max(400),
+  password: z.string().min(6, 'Password must be at least 6 characters').max(200),
+});
+
 export const updateAgentSchema = z.object({
   name: z.string().min(1).max(80).optional(),
   businessName: z.string().max(120).optional(),
