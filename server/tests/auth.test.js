@@ -40,4 +40,73 @@ describe('Auth', () => {
     expect(res.status).toBe(200);
     expect(res.body.data.user.id).toBe(user.user.id);
   });
+
+  describe('password reset', () => {
+    it('emails a reset link and lets the user set a new password', async () => {
+      await request(app)
+        .post('/api/auth/register')
+        .send({ name: 'Reset Me', email: 'reset@test.dev', password: 'oldpassword1' });
+
+      // Request the link — non-prod returns the token so we can drive the flow.
+      const forgot = await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: 'reset@test.dev' });
+      expect(forgot.status).toBe(200);
+      const token = forgot.body.data.devToken;
+      expect(token).toBeTruthy();
+
+      // The token is valid until used.
+      const check = await request(app).get(`/api/auth/reset-password/${token}`);
+      expect(check.body.data.valid).toBe(true);
+
+      // Set the new password.
+      const reset = await request(app)
+        .post('/api/auth/reset-password')
+        .send({ token, password: 'brandnew123' });
+      expect(reset.status).toBe(200);
+
+      // Old password no longer works; the new one does.
+      const oldLogin = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'reset@test.dev', password: 'oldpassword1' });
+      expect(oldLogin.status).toBe(401);
+      const newLogin = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'reset@test.dev', password: 'brandnew123' });
+      expect(newLogin.status).toBe(200);
+    });
+
+    it('makes a reset token single-use', async () => {
+      await request(app)
+        .post('/api/auth/register')
+        .send({ name: 'Once', email: 'once@test.dev', password: 'oldpassword1' });
+      const forgot = await request(app).post('/api/auth/forgot-password').send({ email: 'once@test.dev' });
+      const token = forgot.body.data.devToken;
+
+      const first = await request(app).post('/api/auth/reset-password').send({ token, password: 'firstreset1' });
+      expect(first.status).toBe(200);
+
+      const second = await request(app).post('/api/auth/reset-password').send({ token, password: 'secondreset1' });
+      expect(second.status).toBe(400);
+      expect(second.body.code).toBe('INVALID_RESET_TOKEN');
+    });
+
+    it('does not reveal whether an email is registered', async () => {
+      const res = await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: 'nobody-here@test.dev' });
+      expect(res.status).toBe(200);
+      // No account → no token is issued, but the message is identical.
+      expect(res.body.data.devToken).toBeUndefined();
+      expect(res.body.message).toMatch(/if an account exists/i);
+    });
+
+    it('rejects an unknown reset token', async () => {
+      const res = await request(app)
+        .post('/api/auth/reset-password')
+        .send({ token: 'totally-made-up-token-value', password: 'whatever123' });
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('INVALID_RESET_TOKEN');
+    });
+  });
 });

@@ -21,6 +21,8 @@ const PublicAgentPage = lazy(() => import('./pages/PublicAgentPage.jsx'));
 const InviteAcceptPage = lazy(() => import('./pages/InviteAcceptPage.jsx'));
 const LoginPage = lazy(() => import('./pages/LoginPage.jsx'));
 const SignupPage = lazy(() => import('./pages/SignupPage.jsx'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage.jsx'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage.jsx'));
 
 function ProtectedLayout() {
   const status = useAuthStore((s) => s.status);
@@ -117,6 +119,16 @@ export default function App() {
               </PublicOnly>
             }
           />
+          <Route
+            path="/forgot-password"
+            element={
+              <PublicOnly>
+                <ForgotPasswordPage />
+              </PublicOnly>
+            }
+          />
+          {/* Reachable even if signed in — the emailed token is the credential. */}
+          <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
           {/* Public, unauthenticated shareable agent page */}
           <Route path="/a/:publicId" element={<PublicAgentPage />} />

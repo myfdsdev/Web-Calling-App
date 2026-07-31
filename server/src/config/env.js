@@ -45,6 +45,13 @@ export const env = {
   geminiApiKey: process.env.GEMINI_API_KEY || '',
   geminiModel: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
 
+  // Transactional email (Resend) — used for auth emails like password resets.
+  // This is a PLATFORM key (not per-workspace BYOK): the app sends these itself.
+  resend: {
+    apiKey: process.env.RESEND_API_KEY || '',
+    from: process.env.EMAIL_FROM || 'Vox <onboarding@resend.dev>',
+  },
+
   vapi: {
     privateKey: process.env.VAPI_PRIVATE_API_KEY || '',
     // Public key is safe to expose to the browser (used by @vapi-ai/web).
@@ -67,3 +74,6 @@ export const geminiEnabled = () => Boolean(env.geminiApiKey);
 
 /** True when Vapi private key is configured (server can create real assistants). */
 export const vapiEnabled = () => Boolean(env.vapi.privateKey);
+
+/** True when a transactional-email provider (Resend) is configured. */
+export const emailEnabled = () => Boolean(env.resend.apiKey);
