@@ -13,6 +13,7 @@ import leadRoutes from './routes/leadRoutes.js';
 import billingRoutes from './routes/billingRoutes.js';
 import vapiRoutes from './routes/vapiRoutes.js';
 import publicRoutes from './routes/publicRoutes.js';
+import platformRoutes from './routes/platformRoutes.js';
 
 export function createApp() {
   const app = express();
