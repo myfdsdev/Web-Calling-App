@@ -6,9 +6,16 @@ export const authService = {
   /** Exchange a Google ID token for our own session token. */
   google: (credential) => unwrap(api.post('/auth/google', { credential })),
   me: () => unwrap(api.get('/auth/me')),
+<<<<<<< HEAD
 
   /** Password reset. */
   forgotPassword: (email) => unwrap(api.post('/auth/forgot-password', { email })),
   checkResetToken: (token) => unwrap(api.get(`/auth/reset-password/${token}`)),
+=======
+  /** Start a password reset. Always resolves the same way (no account enumeration);
+   *  in dev with no mail provider the response may include a devLink. */
+  forgotPassword: (email) => unwrap(api.post('/auth/forgot-password', { email })),
+  /** Complete a password reset with the emailed token. */
+>>>>>>> 0e2846b3adbf20526675d1c0beffa326a1771b96
   resetPassword: (token, password) => unwrap(api.post('/auth/reset-password', { token, password })),
 };

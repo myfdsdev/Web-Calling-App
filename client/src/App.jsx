@@ -130,6 +130,11 @@ export default function App() {
           {/* Reachable even if signed in — the emailed token is the credential. */}
           <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
+          {/* Password reset — standalone so a reset link opens regardless of
+              whatever stale session might still be in local storage. */}
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+
           {/* Public, unauthenticated shareable agent page */}
           <Route path="/a/:publicId" element={<PublicAgentPage />} />
 

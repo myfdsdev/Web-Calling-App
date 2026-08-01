@@ -132,6 +132,21 @@ export async function listWorkspacesFor(userId) {
 }
 
 /**
+ * A suspended/cancelled workspace still exists but is frozen — the store bridge
+ * sets this on refund and clears it on reversal. Blocking here freezes every
+ * tenant route in one place.
+ */
+export function assertWorkspaceActive(workspace) {
+  if (workspace && workspace.status && workspace.status !== 'active') {
+    throw new AppError(
+      'This workspace is not active. Contact support to restore access.',
+      403,
+      'WORKSPACE_INACTIVE'
+    );
+  }
+}
+
+/**
  * Resolve the workspace a request should act on: the one it asked for (after a
  * membership check), or the caller's personal workspace when it named none.
  */
@@ -151,11 +166,13 @@ export async function resolveWorkspace(userId, requestedId) {
         'WORKSPACE_ACCESS_REVOKED'
       );
     }
+    assertWorkspaceActive(workspace);
     return { workspace, membership };
   }
 
   const workspace = await ensurePersonalWorkspace(userId);
   if (!workspace) throw new AppError('Workspace not found.', 404, 'WORKSPACE_NOT_FOUND');
+  assertWorkspaceActive(workspace);
   const membership = await membershipFor(workspace._id, userId);
   return { workspace, membership };
 }

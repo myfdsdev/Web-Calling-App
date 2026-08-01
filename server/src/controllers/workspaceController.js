@@ -27,6 +27,8 @@ import { permissionsFor, ROLE_CATALOGUE, ROLE_RANK } from '../config/roles.js';
 import { getPlan } from '../config/plans.js';
 import { deleteAssistant } from '../services/vapiAssistantService.js';
 import { resolveVapiConfig, deleteWorkspaceKeys } from '../services/apiKeyService.js';
+import { sendEmail } from '../services/email/emailClient.js';
+import { teamInvite } from '../services/email/templates.js';
 
 /** Everything the client needs to render one workspace and gate its UI. */
 async function workspaceView(workspace, role) {
@@ -208,10 +210,30 @@ export const inviteMember = asyncHandler(async (req, res) => {
     role,
   });
 
+  // Best-effort email. If no provider is configured it degrades to emailSent:false
+  // and the admin shares the returned link manually (unchanged behaviour).
+  const inviteUrl = inviteUrlFor(invite.token);
+  const invMail = teamInvite({
+    inviterName: inviter?.name,
+    workspaceName: req.workspace.name,
+    inviteUrl,
+    role,
+  });
+  const { sent: emailSent } = await sendEmail({
+    to: email,
+    subject: invMail.subject,
+    html: invMail.html,
+    text: invMail.text,
+  });
+
   return ok(
     res,
-    { invite: invite.toJSONView(inviteUrlFor(invite.token)), emailSent: false },
-    resent ? 'Invitation refreshed — share the new link.' : 'Invitation ready — share the link.',
+    { invite: invite.toJSONView(inviteUrl), emailSent },
+    emailSent
+      ? `Invitation sent to ${email}.`
+      : resent
+        ? 'Invitation refreshed — share the new link.'
+        : 'Invitation ready — share the link.',
     resent ? 200 : 201
   );
 });

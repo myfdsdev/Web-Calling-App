@@ -13,6 +13,7 @@ import leadRoutes from './routes/leadRoutes.js';
 import billingRoutes from './routes/billingRoutes.js';
 import vapiRoutes from './routes/vapiRoutes.js';
 import publicRoutes from './routes/publicRoutes.js';
+import platformRoutes from './routes/platformRoutes.js';
 
 export function createApp() {
   const app = express();
@@ -46,6 +47,9 @@ export function createApp() {
   app.use('/api/billing', billingRoutes);
   app.use('/api/vapi', vapiRoutes);
   app.use('/api/public', publicRoutes);
+  // Server-to-server store bridge (its own /api/v1 namespace, guarded by a shared
+  // secret; the manifest under it is public).
+  app.use('/api/v1/platform', platformRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

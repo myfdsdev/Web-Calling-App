@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -14,6 +15,21 @@ export default function ResetPasswordPage() {
 
   const [checking, setChecking] = useState(true);
   const [valid, setValid] = useState(false);
+
+import { useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
+import { Lock } from 'lucide-react';
+import { AuthShell } from '../components/auth/AuthShell.jsx';
+import { Input } from '../components/ui/Input.jsx';
+import { Button } from '../components/ui/Button.jsx';
+import { authService } from '../services/authService.js';
+
+export default function ResetPasswordPage() {
+  const [params] = useSearchParams();
+  const token = params.get('token') || '';
+  const navigate = useNavigate();
+
   const [form, setForm] = useState({ password: '', confirm: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

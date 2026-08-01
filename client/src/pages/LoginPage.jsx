@@ -79,6 +79,12 @@ export default function LoginPage() {
             onChange={(e) => setForm({ ...form, password: e.target.value })}
             required
           />
+          <Link
+            to="/forgot-password"
+            className="absolute right-0 top-1 text-xs font-medium text-ink-soft hover:text-primary"
+          >
+            Forgot password?
+          </Link>
         </div>
         <div className="flex justify-end">
           <Link

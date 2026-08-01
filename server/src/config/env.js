@@ -11,6 +11,11 @@ export const env = {
   isTest: process.env.NODE_ENV === 'test',
   port: Number(process.env.PORT) || 5000,
 
+  // Identity of THIS app — surfaced in the store-bridge manifest and emails so a
+  // single store-side reader can tell one app in the suite from another.
+  appId: process.env.APP_ID || 'vox',
+  appName: process.env.APP_NAME || 'Vox',
+
   clientUrls: (process.env.CLIENT_URL || 'http://localhost:5173')
     .split(',')
     .map((s) => s.trim())
@@ -63,6 +68,23 @@ export const env = {
     webhookSecret: process.env.VAPI_WEBHOOK_SECRET || '',
   },
 
+  // Shared secret the store presents on the server-to-server bridge (provision /
+  // suspend / reactivate). UNSET means the bridge is DISABLED and every call is
+  // rejected — it fails closed, so a leaked URL can never mint or suspend accounts.
+  platformSecret: process.env.PLATFORM_SECRET || '',
+
+  // Transactional email (password reset, welcome credentials, team invites).
+  // provider 'none' disables sending: callers still succeed but nothing is sent.
+  email: {
+    provider: (process.env.EMAIL_PROVIDER || 'none').toLowerCase(),
+    resendApiKey: process.env.RESEND_API_KEY || '',
+    // A verified sender is required by every provider. Kept generic so a missing
+    // value degrades to "not configured" rather than sending from a bad address.
+    from: process.env.EMAIL_FROM || '',
+    // A mailbox that can actually RECEIVE replies (verified-for-sending ≠ inbox).
+    replyTo: process.env.EMAIL_REPLY_TO || '',
+  },
+
   verboseLogs: bool(process.env.VERBOSE_LOGS, false),
 };
 
@@ -75,5 +97,16 @@ export const geminiEnabled = () => Boolean(env.geminiApiKey);
 /** True when Vapi private key is configured (server can create real assistants). */
 export const vapiEnabled = () => Boolean(env.vapi.privateKey);
 
+<<<<<<< HEAD
 /** True when a transactional-email provider (Resend) is configured. */
 export const emailEnabled = () => Boolean(env.resend.apiKey);
+=======
+/** True when the store bridge is armed (a shared secret is configured). */
+export const platformBridgeEnabled = () => Boolean(env.platformSecret);
+
+/** True when a real email provider is configured and can send. */
+export const emailEnabled = () =>
+  env.email.provider !== 'none' &&
+  Boolean(env.email.from) &&
+  (env.email.provider !== 'resend' || Boolean(env.email.resendApiKey));
+>>>>>>> 0e2846b3adbf20526675d1c0beffa326a1771b96

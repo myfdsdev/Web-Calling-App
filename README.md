@@ -117,6 +117,7 @@ edit a previous answer, greeting generation), and ownership on every resource.
 
 ```
 POST   /api/auth/register | /login            GET /api/auth/me
+POST   /api/auth/forgot-password | /reset-password   (rate limited; no account enumeration)
 POST   /api/agent-builder/start | /message
 GET    /api/agent-builder/voices | /flow | /drafts | /drafts/:id
 PATCH  /api/agent-builder/drafts/:id          DELETE /api/agent-builder/drafts/:id
@@ -125,9 +126,14 @@ GET    /api/agents | /agents/summary | /agents/:id
 PATCH  /api/agents/:id                         DELETE /api/agents/:id
 GET    /api/vapi/config                         POST /api/vapi/webhook
 GET    /api/public/agents/:publicId            (NO AUTH — shareable public agent)
+
+# Store bridge (server-to-server; shared secret via x-platform-secret)
+GET    /api/v1/platform/manifest              (PUBLIC — discovery, no secret)
+POST   /api/v1/platform/provision | /suspend | /reactivate
 ```
 
 Client routes: `/dashboard`, `/agents`, `/agents/create`, `/agents/:id`, `/agents/:id/edit`,
-`/agents/:id/customize`, `/agents/:id/test`, and the public **`/a/:publicId`** share page.
+`/agents/:id/customize`, `/agents/:id/test`, the public **`/a/:publicId`** share page, and the
+auth pages `/login`, `/signup`, `/forgot-password`, `/reset-password`.
 
 All responses use `{ success, message, data }` (or `{ success:false, message, code }` on error).
