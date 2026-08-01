@@ -243,3 +243,47 @@ describe('Workspaces, roles & invites', () => {
     expect(del.body.code).toBe('PERSONAL_WORKSPACE');
   });
 });
+
+describe('Admin plan — one workspace, gated access', () => {
+  async function makeAdmin() {
+    const email = `adm.${Math.floor(process.hrtime()[1] % 1e6)}.${Math.random().toString(36).slice(2, 6)}@test.dev`;
+    const res = await request(app)
+      .post('/api/auth/register-admin')
+      .send({ name: 'Admin', email, password: 'password123' });
+    const { token, user } = res.body.data;
+    return { token, user, bearer: (req) => req.set('Authorization', `Bearer ${token}`) };
+  }
+
+  it('gives an admin NO auto workspace and blocks the app until they create one', async () => {
+    const admin = await makeAdmin();
+
+    const list = await admin.bearer(request(app).get('/api/workspaces'));
+    expect(list.body.data.workspaces).toHaveLength(0);
+
+    const blocked = await admin.bearer(request(app).get('/api/agents'));
+    expect(blocked.status).toBe(403);
+    expect(blocked.body.code).toBe('WORKSPACE_REQUIRED');
+  });
+
+  it('unlocks the app once the admin creates their workspace', async () => {
+    const admin = await makeAdmin();
+    const created = await admin.bearer(request(app).post('/api/workspaces')).send({ name: 'Acme' });
+    expect(created.status).toBe(201);
+
+    const list = await admin.bearer(request(app).get('/api/workspaces'));
+    expect(list.body.data.workspaces).toHaveLength(1);
+
+    const agents = await admin.bearer(request(app).get('/api/agents'));
+    expect(agents.status).toBe(200);
+  });
+
+  it('caps an admin at a single workspace', async () => {
+    const admin = await makeAdmin();
+    const first = await admin.bearer(request(app).post('/api/workspaces')).send({ name: 'One' });
+    expect(first.status).toBe(201);
+
+    const second = await admin.bearer(request(app).post('/api/workspaces')).send({ name: 'Two' });
+    expect(second.status).toBe(403);
+    expect(second.body.code).toBe('WORKSPACE_LIMIT');
+  });
+});

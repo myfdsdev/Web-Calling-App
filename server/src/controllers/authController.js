@@ -36,6 +36,25 @@ export const register = asyncHandler(async (req, res) => {
   return ok(res, { token, user: user.toPublic() }, 'Account created.', 201);
 });
 
+/**
+ * POST /api/auth/register-admin
+ * Self-serve signup that provisions the account on the "Admin" plan, so the new
+ * user immediately owns a workspace they can invite users into and manage.
+ */
+export const registerAdmin = asyncHandler(async (req, res) => {
+  const { name, email, password } = registerSchema.parse(req.body);
+
+  const existing = await User.findOne({ email });
+  if (existing) throw new AppError('An account with that email already exists.', 409, 'EMAIL_TAKEN');
+
+  const user = new User({ name, email, plan: 'admin' });
+  await user.setPassword(password);
+  await user.save();
+
+  const token = signToken(user);
+  return ok(res, { token, user: user.toPublic() }, 'Admin account created.', 201);
+});
+
 export const login = asyncHandler(async (req, res) => {
   const { email, password } = loginSchema.parse(req.body);
 

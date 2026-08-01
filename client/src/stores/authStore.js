@@ -44,6 +44,13 @@ export const useAuthStore = create((set) => ({
     return user;
   },
 
+  async registerAdmin(payload) {
+    const { token, user } = await authService.registerAdmin(payload);
+    setToken(token);
+    set({ user, status: 'authed', hydrated: true });
+    return user;
+  },
+
   logout() {
     setToken(null);
     set({ user: null, status: 'anon' });

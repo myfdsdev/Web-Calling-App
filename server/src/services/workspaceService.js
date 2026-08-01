@@ -55,6 +55,10 @@ export async function ensurePersonalWorkspace(userOrId) {
   const user = userOrId?.name ? userOrId : await User.findById(userId);
   if (!user) return null;
 
+  // Admin-plan accounts do NOT get an auto workspace — they must create their one
+  // workspace explicitly, and app access is gated until they do.
+  if (user.plan === 'admin') return null;
+
   let workspace;
   try {
     workspace = await Workspace.create({
@@ -170,19 +174,43 @@ export async function resolveWorkspace(userId, requestedId) {
     return { workspace, membership };
   }
 
-  const workspace = await ensurePersonalWorkspace(userId);
-  if (!workspace) throw new AppError('Workspace not found.', 404, 'WORKSPACE_NOT_FOUND');
+  let workspace = await ensurePersonalWorkspace(userId);
+  if (!workspace) {
+    // No auto workspace (admin, or an account without one) — fall back to any
+    // workspace they belong to; else they must create/join one to use the app.
+    const anyMembership = await WorkspaceMember.findOne({ userId });
+    if (anyMembership) workspace = await Workspace.findById(anyMembership.workspaceId);
+  }
+  if (!workspace) {
+    throw new AppError(
+      'Create your workspace to start using the app.',
+      403,
+      'WORKSPACE_REQUIRED'
+    );
+  }
   assertWorkspaceActive(workspace);
   const membership = await membershipFor(workspace._id, userId);
   return { workspace, membership };
 }
 
-/** Create a new (non-personal) workspace with the caller as its owner. */
+/** Create a workspace with the caller as its owner. */
 export async function createWorkspace(userId, { name, color }) {
+  const user = await User.findById(userId);
+  const isAdmin = user?.plan === 'admin';
+
+  // Admin accounts are capped at a single workspace (their permanent main one).
+  if (isAdmin) {
+    const owned = await Workspace.countDocuments({ ownerId: userId });
+    if (owned >= 1) {
+      throw new AppError('Your Admin plan includes a single workspace.', 403, 'WORKSPACE_LIMIT');
+    }
+  }
+
   const workspace = await Workspace.create({
     name,
     ownerId: userId,
-    isPersonal: false,
+    // An admin's one workspace IS their main workspace, so it's non-deletable.
+    isPersonal: isAdmin,
     ...(color ? { color } : {}),
   });
   await WorkspaceMember.create({

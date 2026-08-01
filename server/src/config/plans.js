@@ -105,6 +105,27 @@ export const PLANS = [
     ],
     limits: { customBranding: true, customCode: true, prioritySupport: true },
   },
+  {
+    // Assigned automatically by the /register-admin page. Turns the holder into a
+    // "mini-admin" who runs their own workspace: invites users, grants features
+    // per user, and allocates a shared credit budget. `hidden` keeps it out of the
+    // public pricing/switch catalogue so it can't be self-selected for free.
+    id: 'admin',
+    name: 'Admin',
+    tagline: 'Run your own team',
+    priceMonthly: 0,
+    credits: 6000, // generous shared pool the owner allocates across users
+    maxAgents: 50,
+    maxMembers: 50,
+    hidden: true,
+    features: [
+      'Invite users into your workspace',
+      'Grant app features per user',
+      'Allocate a shared credit budget',
+      'Everything in Business',
+    ],
+    limits: { customBranding: true, customCode: true, prioritySupport: true },
+  },
 ];
 
 /**

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   register,
+  registerAdmin,
   login,
   googleAuth,
   me,
@@ -18,6 +19,7 @@ const forgotLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5, key: (req) =
 const resetLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, key: (req) => `reset:${req.ip}` });
 
 router.post('/register', register);
+router.post('/register-admin', registerAdmin);
 router.post('/login', login);
 router.post('/google', googleAuth);
 router.post('/forgot-password', forgotLimiter, forgotPassword);

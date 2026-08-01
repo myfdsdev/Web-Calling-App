@@ -3,6 +3,8 @@ import { Routes, Route, Navigate, Outlet, useLocation, useNavigate } from 'react
 import { AnimatePresence } from 'framer-motion';
 import { Sidebar } from './components/layout/Sidebar.jsx';
 import { OnboardingApiKeys } from './components/settings/OnboardingApiKeys.jsx';
+import { CreateWorkspaceGate } from './components/workspace/CreateWorkspaceGate.jsx';
+import { AccessDeniedGate } from './components/workspace/AccessDeniedGate.jsx';
 import { useAuthStore } from './stores/authStore.js';
 import { useWorkspaceStore } from './stores/workspaceStore.js';
 import { FullPageLoader } from './components/common/FullPageLoader.jsx';
@@ -23,10 +25,13 @@ const LoginPage = lazy(() => import('./pages/LoginPage.jsx'));
 const SignupPage = lazy(() => import('./pages/SignupPage.jsx'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage.jsx'));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage.jsx'));
+const RegisterAdminPage = lazy(() => import('./pages/RegisterAdminPage.jsx'));
 
 function ProtectedLayout() {
   const status = useAuthStore((s) => s.status);
+  const user = useAuthStore((s) => s.user);
   const wsLoaded = useWorkspaceStore((s) => s.loaded);
+  const workspaces = useWorkspaceStore((s) => s.workspaces);
   const loadWorkspaces = useWorkspaceStore((s) => s.load);
   const location = useLocation();
 
@@ -39,6 +44,14 @@ function ProtectedLayout() {
   if (status === 'loading' || status === 'idle') return <FullPageLoader />;
   if (status === 'anon') return <Navigate to="/login" state={{ from: location }} replace />;
   if (!wsLoaded) return <FullPageLoader />;
+
+  const isAdmin = user?.plan === 'admin';
+  // Invited into someone else's workspace = a workspace where you're not the owner.
+  const isInvited = workspaces.some((w) => w.role !== 'owner');
+  // A fresh admin must create their (single) workspace before the app unlocks.
+  if (isAdmin && workspaces.length === 0) return <CreateWorkspaceGate />;
+  // A plain user who isn't an admin and hasn't been invited can't use this paid app.
+  if (!isAdmin && !isInvited) return <AccessDeniedGate />;
   return (
     <div className="min-h-full">
       <Sidebar />
@@ -116,6 +129,14 @@ export default function App() {
             element={
               <PublicOnly>
                 <SignupPage />
+              </PublicOnly>
+            }
+          />
+          <Route
+            path="/register-admin"
+            element={
+              <PublicOnly>
+                <RegisterAdminPage />
               </PublicOnly>
             }
           />

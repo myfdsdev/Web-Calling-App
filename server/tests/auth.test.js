@@ -13,6 +13,15 @@ describe('Auth', () => {
     expect(res.body.data.user.email).toBe('ada@test.dev');
   });
 
+  it('registers an admin account provisioned on the Admin plan', async () => {
+    const res = await request(app)
+      .post('/api/auth/register-admin')
+      .send({ name: 'Admina', email: 'admin@test.dev', password: 'password123' });
+    expect(res.status).toBe(201);
+    expect(res.body.data.token).toBeTruthy();
+    expect(res.body.data.user.plan).toBe('admin');
+  });
+
   it('rejects duplicate email', async () => {
     await request(app).post('/api/auth/register').send({ name: 'Alice', email: 'dupe@test.dev', password: 'password123' });
     const res = await request(app)

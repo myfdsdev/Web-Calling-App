@@ -86,14 +86,6 @@ export default function LoginPage() {
             Forgot password?
           </Link>
         </div>
-        <div className="flex justify-end">
-          <Link
-            to="/forgot-password"
-            className="text-[13px] font-semibold text-ink-soft transition-colors hover:text-ink"
-          >
-            Forgot password?
-          </Link>
-        </div>
         {error && <p className="text-sm text-danger">{error}</p>}
         <Button type="submit" size="lg" className="w-full" loading={loading}>
           Sign in

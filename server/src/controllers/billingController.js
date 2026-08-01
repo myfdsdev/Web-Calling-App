@@ -16,7 +16,8 @@ import { planChangeSchema, topUpSchema } from '../validators/agentValidator.js';
 /** GET /api/billing/plans — the catalogue (no auth needed beyond the router). */
 export const listPlans = asyncHandler(async (req, res) => {
   return ok(res, {
-    plans: PLANS,
+    // `hidden` plans (e.g. Admin) are registration-assigned, never self-selectable.
+    plans: PLANS.filter((p) => !p.hidden),
     packs: CREDIT_PACKS,
     rates: {
       voiceCreditsPerMinute: VOICE_CREDITS_PER_MINUTE,
