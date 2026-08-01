@@ -10,21 +10,11 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
 } from '../validators/agentValidator.js';
-<<<<<<< HEAD
-import { env, googleAuthEnabled, emailEnabled } from '../config/env.js';
-import {
-  createResetToken,
-  consumeResetToken,
-  isResetTokenValid,
-} from '../services/passwordResetService.js';
-import { sendPasswordResetEmail } from '../services/emailService.js';
-=======
 import {
   requestPasswordReset,
   completePasswordReset,
 } from '../services/auth/passwordResetService.js';
 import { env, googleAuthEnabled } from '../config/env.js';
->>>>>>> 0e2846b3adbf20526675d1c0beffa326a1771b96
 
 let googleClient = null;
 function getGoogleClient() {
@@ -130,82 +120,6 @@ export const me = asyncHandler(async (req, res) => {
 });
 
 /**
-<<<<<<< HEAD
- * POST /api/auth/forgot-password
- * Emails a reset link if the address has an account. The response is IDENTICAL
- * whether or not the account exists, so it can't be used to discover who's
- * registered (anti-enumeration).
- */
-export const forgotPassword = asyncHandler(async (req, res) => {
-  const { email } = forgotPasswordSchema.parse(req.body);
-  const user = await User.findOne({ email: email.toLowerCase() });
-
-  let devToken;
-  if (user) {
-    const token = await createResetToken(user._id);
-    const resetUrl = `${env.appUrl}/reset-password/${token}`;
-    try {
-      await sendPasswordResetEmail({ to: user.email, name: user.name, resetUrl });
-    } catch (err) {
-      // Never surface a provider failure to the caller (would leak existence);
-      // log it so the operator can react.
-      if (!env.isTest) {
-        // eslint-disable-next-line no-console
-        console.warn('Password-reset email failed to send:', err?.message);
-      }
-    }
-    // Convenience for local dev / tests where no email provider is wired up.
-    if (!env.isProd) {
-      devToken = token;
-      if (!emailEnabled() && !env.isTest) {
-        // eslint-disable-next-line no-console
-        console.log(`\n🔑 Password reset link (dev): ${resetUrl}\n`);
-      }
-    }
-  }
-
-  return ok(
-    res,
-    { ...(devToken ? { devToken } : {}) },
-    'If an account exists for that email, a password reset link is on its way.'
-  );
-});
-
-/**
- * GET /api/auth/reset-password/:token
- * Pre-flight check so the reset page can show "link expired" up front rather
- * than only after the user fills in a new password.
- */
-export const checkResetToken = asyncHandler(async (req, res) => {
-  const valid = await isResetTokenValid(req.params.token);
-  return ok(res, { valid });
-});
-
-/**
- * POST /api/auth/reset-password
- * Consume a valid token and set the new password. Works for Google-only accounts
- * too (it simply adds a password they can then sign in with).
- */
-export const resetPassword = asyncHandler(async (req, res) => {
-  const { token, password } = resetPasswordSchema.parse(req.body);
-
-  const userId = await consumeResetToken(token);
-  if (!userId) {
-    throw new AppError(
-      'This reset link is invalid or has expired. Please request a new one.',
-      400,
-      'INVALID_RESET_TOKEN'
-    );
-  }
-
-  const user = await User.findById(userId).select('+passwordHash');
-  if (!user) throw new AppError('Account not found.', 404, 'USER_NOT_FOUND');
-
-  await user.setPassword(password);
-  await user.save();
-
-  return ok(res, {}, 'Your password has been reset. You can sign in now.');
-=======
  * POST /api/auth/forgot-password { email }
  * Always returns the SAME 200 + message whether or not the address exists — the
  * response must never reveal which emails have accounts. `sent` is deliberately
@@ -227,5 +141,4 @@ export const resetPassword = asyncHandler(async (req, res) => {
   const { token, password } = resetPasswordSchema.parse(req.body);
   await completePasswordReset(token, password);
   return ok(res, {}, 'Your password has been reset. Please sign in.');
->>>>>>> 0e2846b3adbf20526675d1c0beffa326a1771b96
 });

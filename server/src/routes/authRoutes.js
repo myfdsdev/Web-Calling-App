@@ -5,10 +5,6 @@ import {
   googleAuth,
   me,
   forgotPassword,
-<<<<<<< HEAD
-  checkResetToken,
-=======
->>>>>>> 0e2846b3adbf20526675d1c0beffa326a1771b96
   resetPassword,
 } from '../controllers/authController.js';
 import { requireAuth } from '../middleware/auth.js';
@@ -27,10 +23,5 @@ router.post('/google', googleAuth);
 router.post('/forgot-password', forgotLimiter, forgotPassword);
 router.post('/reset-password', resetLimiter, resetPassword);
 router.get('/me', requireAuth, me);
-
-// Password reset (all unauthenticated — the token IS the credential).
-router.post('/forgot-password', forgotPassword);
-router.get('/reset-password/:token', checkResetToken);
-router.post('/reset-password', resetPassword);
 
 export default router;

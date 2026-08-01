@@ -1,21 +1,3 @@
-
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { toast } from 'sonner';
-import { Lock, ArrowLeft, ShieldAlert } from 'lucide-react';
-import { AuthShell } from '../components/auth/AuthShell.jsx';
-import { Input } from '../components/ui/Input.jsx';
-import { Button } from '../components/ui/Button.jsx';
-import { FullPageLoader } from '../components/common/FullPageLoader.jsx';
-import { authService } from '../services/authService.js';
-
-export default function ResetPasswordPage() {
-  const { token } = useParams();
-  const navigate = useNavigate();
-
-  const [checking, setChecking] = useState(true);
-  const [valid, setValid] = useState(false);
-
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -34,19 +16,6 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Pre-flight: is this link still good? Lets us show "expired" up front.
-  useEffect(() => {
-    let active = true;
-    authService
-      .checkResetToken(token)
-      .then((data) => active && setValid(Boolean(data?.valid)))
-      .catch(() => active && setValid(false))
-      .finally(() => active && setChecking(false));
-    return () => {
-      active = false;
-    };
-  }, [token]);
-
   const onSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -55,44 +24,33 @@ export default function ResetPasswordPage() {
       return;
     }
     if (form.password !== form.confirm) {
-      setError('Passwords don’t match.');
+      setError('Passwords do not match.');
       return;
     }
     setLoading(true);
     try {
       await authService.resetPassword(token, form.password);
-      toast.success('Password reset — please sign in.');
+      toast.success('Your password has been reset. Please sign in.');
       navigate('/login', { replace: true });
     } catch (err) {
-      setError(err.normalizedMessage || 'Could not reset your password. The link may have expired.');
+      setError(err.normalizedMessage || 'This reset link is invalid or has expired.');
     } finally {
       setLoading(false);
     }
   };
 
-  if (checking) return <FullPageLoader />;
-
-  if (!valid) {
+  if (!token) {
     return (
       <AuthShell>
-        <div className="flex flex-col items-center text-center">
-          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-danger/10 text-danger">
-            <ShieldAlert className="h-7 w-7" />
-          </span>
-          <h1 className="mt-5 text-2xl font-bold text-ink">Link expired</h1>
-          <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-            This password reset link is invalid or has already been used. Request a fresh one to continue.
-          </p>
-          <Link to="/forgot-password" className="mt-6">
-            <Button size="lg">Request a new link</Button>
-          </Link>
-        </div>
+        <h1 className="text-2xl font-bold text-ink">Invalid reset link</h1>
+        <p className="mt-2 text-sm text-ink-soft">
+          This link is missing its token. Request a new one and try again.
+        </p>
         <Link
-          to="/login"
-          className="mt-8 flex items-center justify-center gap-1.5 text-sm font-semibold text-ink-soft transition-colors hover:text-ink"
+          to="/forgot-password"
+          className="mt-6 inline-block text-sm font-semibold text-primary hover:underline"
         >
-          <ArrowLeft className="h-4 w-4" />
-          Back to sign in
+          Request a new link
         </Link>
       </AuthShell>
     );
@@ -101,7 +59,7 @@ export default function ResetPasswordPage() {
   return (
     <AuthShell>
       <h1 className="text-2xl font-bold text-ink">Choose a new password</h1>
-      <p className="mt-1.5 text-sm text-ink-soft">Pick something you haven’t used before.</p>
+      <p className="mt-1.5 text-sm text-ink-soft">Enter and confirm your new password below.</p>
 
       <form onSubmit={onSubmit} className="mt-8 space-y-4">
         <div className="relative">
@@ -111,12 +69,11 @@ export default function ResetPasswordPage() {
             type="password"
             label="New password"
             autoComplete="new-password"
-            placeholder="At least 6 characters"
+            placeholder="••••••••"
             className="pl-10"
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
             required
-            minLength={6}
           />
         </div>
         <div className="relative">
@@ -126,7 +83,7 @@ export default function ResetPasswordPage() {
             type="password"
             label="Confirm password"
             autoComplete="new-password"
-            placeholder="Re-enter your new password"
+            placeholder="••••••••"
             className="pl-10"
             value={form.confirm}
             onChange={(e) => setForm({ ...form, confirm: e.target.value })}
@@ -138,6 +95,12 @@ export default function ResetPasswordPage() {
           Reset password
         </Button>
       </form>
+
+      <p className="mt-6 text-center text-sm text-ink-soft">
+        <Link to="/login" className="font-semibold text-primary hover:underline">
+          Back to sign in
+        </Link>
+      </p>
     </AuthShell>
   );
 }

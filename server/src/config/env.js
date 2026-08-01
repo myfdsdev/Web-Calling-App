@@ -97,10 +97,6 @@ export const geminiEnabled = () => Boolean(env.geminiApiKey);
 /** True when Vapi private key is configured (server can create real assistants). */
 export const vapiEnabled = () => Boolean(env.vapi.privateKey);
 
-<<<<<<< HEAD
-/** True when a transactional-email provider (Resend) is configured. */
-export const emailEnabled = () => Boolean(env.resend.apiKey);
-=======
 /** True when the store bridge is armed (a shared secret is configured). */
 export const platformBridgeEnabled = () => Boolean(env.platformSecret);
 
@@ -109,4 +105,3 @@ export const emailEnabled = () =>
   env.email.provider !== 'none' &&
   Boolean(env.email.from) &&
   (env.email.provider !== 'resend' || Boolean(env.email.resendApiKey));
->>>>>>> 0e2846b3adbf20526675d1c0beffa326a1771b96

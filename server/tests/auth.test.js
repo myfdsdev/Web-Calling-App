@@ -42,22 +42,21 @@ describe('Auth', () => {
   });
 
   describe('password reset', () => {
+    // In non-prod with no mail provider the API returns a `devLink` — the reset
+    // URL carries the raw token as a query param (…/reset-password?token=…).
+    const tokenFromDevLink = (devLink) => new URL(devLink).searchParams.get('token');
+
     it('emails a reset link and lets the user set a new password', async () => {
       await request(app)
         .post('/api/auth/register')
         .send({ name: 'Reset Me', email: 'reset@test.dev', password: 'oldpassword1' });
 
-      // Request the link — non-prod returns the token so we can drive the flow.
       const forgot = await request(app)
         .post('/api/auth/forgot-password')
         .send({ email: 'reset@test.dev' });
       expect(forgot.status).toBe(200);
-      const token = forgot.body.data.devToken;
+      const token = tokenFromDevLink(forgot.body.data.devLink);
       expect(token).toBeTruthy();
-
-      // The token is valid until used.
-      const check = await request(app).get(`/api/auth/reset-password/${token}`);
-      expect(check.body.data.valid).toBe(true);
 
       // Set the new password.
       const reset = await request(app)
@@ -81,7 +80,7 @@ describe('Auth', () => {
         .post('/api/auth/register')
         .send({ name: 'Once', email: 'once@test.dev', password: 'oldpassword1' });
       const forgot = await request(app).post('/api/auth/forgot-password').send({ email: 'once@test.dev' });
-      const token = forgot.body.data.devToken;
+      const token = tokenFromDevLink(forgot.body.data.devLink);
 
       const first = await request(app).post('/api/auth/reset-password').send({ token, password: 'firstreset1' });
       expect(first.status).toBe(200);
@@ -96,8 +95,8 @@ describe('Auth', () => {
         .post('/api/auth/forgot-password')
         .send({ email: 'nobody-here@test.dev' });
       expect(res.status).toBe(200);
-      // No account → no token is issued, but the message is identical.
-      expect(res.body.data.devToken).toBeUndefined();
+      // No account → no link is issued, but the message is identical.
+      expect(res.body.data.devLink).toBeUndefined();
       expect(res.body.message).toMatch(/if an account exists/i);
     });
 
