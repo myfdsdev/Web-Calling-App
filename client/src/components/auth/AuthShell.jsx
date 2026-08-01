@@ -13,17 +13,7 @@ export function AuthShell({ children }) {
         <div className="absolute -left-16 top-24 h-72 w-72 rounded-full bg-white/[0.04] blur-3xl" />
         <div className="absolute bottom-10 right-0 h-80 w-80 rounded-full bg-white/[0.03] blur-3xl" />
         <div className="relative flex h-full flex-col justify-between p-12 text-ink">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.06]">
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
-                <rect x="4" y="9" width="2" height="6" rx="1" />
-                <rect x="8" y="6" width="2" height="12" rx="1" />
-                <rect x="12" y="3" width="2" height="18" rx="1" />
-                <rect x="16" y="7" width="2" height="10" rx="1" />
-              </svg>
-            </span>
-            <span className="text-lg font-extrabold tracking-tight">Vox</span>
-          </div>
+          <img src="/ringweb.png" alt="ringwebai" className="-ml-3 w-72 max-w-full object-contain" />
           <div>
             <motion.h2
               initial={{ opacity: 0, y: 12 }}
@@ -66,6 +56,12 @@ export function AuthShell({ children }) {
           transition={{ duration: 0.35 }}
           className="w-full max-w-[400px]"
         >
+          {/* Logo for the form side — shown on mobile where the brand panel is hidden. */}
+          <img
+            src="/ringweb.png"
+            alt="ringwebai"
+            className="mb-8 h-10 w-auto object-contain lg:hidden"
+          />
           {children}
         </motion.div>
       </div>

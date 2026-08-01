@@ -16,26 +16,24 @@ import { cn } from '../../lib/cn.js';
 import { useMyBilling } from '../../hooks/useBilling.js';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher.jsx';
 
+
 const NAV = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/agents', label: 'Agents', icon: Bot, end: false },
   { to: '/leads', label: 'Leads', icon: Users, end: false },
   { to: '/team', label: 'Team', icon: UsersRound, end: false },
-  { to: '/billing', label: 'Plans & Credits', icon: Zap, end: false },
 ];
 
-function Logo() {
+function Logo({ className }) {
   return (
-    <Link to="/dashboard" className="flex items-center gap-2.5 rounded-lg focus-ring">
-      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-[#0A0A0A]">
-        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden>
-          <rect x="4" y="9" width="2" height="6" rx="1" />
-          <rect x="8" y="6" width="2" height="12" rx="1" />
-          <rect x="12" y="3" width="2" height="18" rx="1" />
-          <rect x="16" y="7" width="2" height="10" rx="1" />
-        </svg>
-      </span>
-      <span className="text-[15px] font-bold tracking-tight text-ink">Vox</span>
+    <Link to="/dashboard" className="flex items-center rounded-lg focus-ring">
+      {/* Height-driven with w-auto (aspect preserved) + shrink-0 so flexbox never
+          squishes it. Pass a height via className to size it per placement. */}
+      <img
+        src="/ringweb.png"
+        alt="ringwebai"
+        className={cn('h-11 w-auto shrink-0 object-contain', className)}
+      />
     </Link>
   );
 }
@@ -109,7 +107,7 @@ function SidebarContent({ onNavigate }) {
     <div className="flex h-full flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-4">
-        <Logo />
+        <Logo className="h-14" />
         <button
           onClick={() => {
             onNavigate?.();
@@ -154,7 +152,7 @@ export function Sidebar() {
     <>
       {/* Mobile top bar */}
       <div className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-line bg-canvas/90 px-4 backdrop-blur lg:hidden">
-        <Logo />
+        <Logo className="h-10" />
         <button
           onClick={() => setMobileOpen(true)}
           className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-soft hover:bg-white/[0.06] hover:text-ink focus-ring"
