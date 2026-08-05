@@ -3,6 +3,7 @@ import request from 'supertest';
 import { app, makeUser } from './helpers.js';
 import { PasswordResetToken, resetExpiry } from '../src/models/PasswordResetToken.js';
 import { sha256Hex } from '../src/utils/security.js';
+import { env } from '../src/config/env.js';
 
 /** Pull the raw reset token out of the dev-only link the endpoint returns when no
  *  mail provider is configured (EMAIL_PROVIDER defaults to 'none' in tests). */
@@ -41,6 +42,66 @@ describe('Password reset', () => {
     expect(record.tokenHash).toMatch(/^[a-f0-9]{64}$/);
     expect(record.tokenHash).not.toBe(raw);
     expect(record.tokenHash).toBe(sha256Hex(raw));
+  });
+
+  it('sends the reset email through configured Resend without returning a dev link', async () => {
+    const originalEmail = { ...env.email };
+    const originalFetch = global.fetch;
+    let sentPayload = null;
+
+    env.email = {
+      provider: 'resend',
+      resendApiKey: 'test-key',
+      from: 'Vox <no-reply@test.dev>',
+      replyTo: '',
+    };
+    global.fetch = async (url, options) => {
+      expect(String(url)).toContain('api.resend.com');
+      sentPayload = JSON.parse(options.body);
+      return { ok: true, status: 200, json: async () => ({ id: 'email_test_reset' }) };
+    };
+
+    try {
+      const user = await makeUser();
+      const res = await requestReset(user.user.email);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.devLink).toBeUndefined();
+      expect(sentPayload.to).toEqual([user.user.email]);
+      expect(sentPayload.subject).toMatch(/reset/i);
+      expect(sentPayload.html).toContain('/reset-password?token=');
+    } finally {
+      env.email = originalEmail;
+      global.fetch = originalFetch;
+    }
+  });
+
+  it('does not return a dev link when a configured email provider fails', async () => {
+    const originalEmail = { ...env.email };
+    const originalFetch = global.fetch;
+
+    env.email = {
+      provider: 'resend',
+      resendApiKey: 'test-key',
+      from: 'Vox <no-reply@test.dev>',
+      replyTo: '',
+    };
+    global.fetch = async () => ({
+      ok: false,
+      status: 403,
+      json: async () => ({ message: 'Domain is not verified' }),
+    });
+
+    try {
+      const user = await makeUser();
+      const res = await requestReset(user.user.email);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.devLink).toBeUndefined();
+    } finally {
+      env.email = originalEmail;
+      global.fetch = originalFetch;
+    }
   });
 
   it('resets the password, then rejects the spent token on reuse', async () => {

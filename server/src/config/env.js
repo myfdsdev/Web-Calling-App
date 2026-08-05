@@ -1,14 +1,25 @@
 import dotenv from 'dotenv';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-dotenv.config();
+const __dirname = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: resolve(__dirname, '../../.env') });
 
 const bool = (v, fallback = false) =>
   v == null ? fallback : ['1', 'true', 'yes', 'on'].includes(String(v).toLowerCase());
 
+const nodeEnv = process.env.NODE_ENV || 'development';
+const resendApiKey = process.env.RESEND_API_KEY || '';
+const emailFrom = process.env.EMAIL_FROM || 'Vox <onboarding@resend.dev>';
+const emailProvider = (
+  process.env.EMAIL_PROVIDER ||
+  (nodeEnv !== 'test' && resendApiKey ? 'resend' : 'none')
+).toLowerCase();
+
 export const env = {
-  nodeEnv: process.env.NODE_ENV || 'development',
-  isProd: process.env.NODE_ENV === 'production',
-  isTest: process.env.NODE_ENV === 'test',
+  nodeEnv,
+  isProd: nodeEnv === 'production',
+  isTest: nodeEnv === 'test',
   port: Number(process.env.PORT) || 5000,
 
   // Identity of THIS app — surfaced in the store-bridge manifest and emails so a
@@ -53,8 +64,8 @@ export const env = {
   // Transactional email (Resend) — used for auth emails like password resets.
   // This is a PLATFORM key (not per-workspace BYOK): the app sends these itself.
   resend: {
-    apiKey: process.env.RESEND_API_KEY || '',
-    from: process.env.EMAIL_FROM || 'Vox <onboarding@resend.dev>',
+    apiKey: resendApiKey,
+    from: emailFrom,
   },
 
   vapi: {
@@ -76,11 +87,11 @@ export const env = {
   // Transactional email (password reset, welcome credentials, team invites).
   // provider 'none' disables sending: callers still succeed but nothing is sent.
   email: {
-    provider: (process.env.EMAIL_PROVIDER || 'none').toLowerCase(),
-    resendApiKey: process.env.RESEND_API_KEY || '',
+    provider: emailProvider,
+    resendApiKey,
     // A verified sender is required by every provider. Kept generic so a missing
     // value degrades to "not configured" rather than sending from a bad address.
-    from: process.env.EMAIL_FROM || '',
+    from: emailFrom,
     // A mailbox that can actually RECEIVE replies (verified-for-sending ≠ inbox).
     replyTo: process.env.EMAIL_REPLY_TO || '',
   },
@@ -97,5 +108,10 @@ export const geminiEnabled = () => Boolean(env.geminiApiKey);
 /** True when Vapi private key is configured (server can create real assistants). */
 export const vapiEnabled = () => Boolean(env.vapi.privateKey);
 
+/** True when the store bridge shared secret is configured. */
+export const platformBridgeEnabled = () => Boolean(env.platformSecret);
+
 /** True when a transactional-email provider (Resend) is configured. */
-export const emailEnabled = () => Boolean(env.resend.apiKey);
+export const emailEnabled = () =>
+  env.email.provider === 'resend' &&
+  Boolean(env.email.resendApiKey && env.email.from);

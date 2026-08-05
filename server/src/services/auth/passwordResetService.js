@@ -45,7 +45,7 @@ export async function requestPasswordReset(rawEmail) {
   // Dev-only fallback so a developer with no mail provider can still finish the
   // flow. NEVER surfaced in production, and the controller never leaks it to the
   // client regardless.
-  const devLink = !env.isProd && !result.sent ? resetUrlFor(token) : undefined;
+  const devLink = !env.isProd && result.reason === 'not_configured' ? resetUrlFor(token) : undefined;
   return { sent: result.sent, devLink };
 }
 
