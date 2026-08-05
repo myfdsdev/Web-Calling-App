@@ -65,7 +65,7 @@ export default function InviteAcceptPage() {
           <h1 className="mt-5 text-xl font-bold text-ink">Invitation unavailable</h1>
           <p className="mt-2 text-sm leading-relaxed text-ink-soft">{msg}</p>
           <Button className="mt-6" onClick={() => navigate('/dashboard')}>
-            Go to Vox
+            Go to ringwebai
           </Button>
         </div>
       </Shell>
@@ -174,7 +174,7 @@ export default function InviteAcceptPage() {
 
       <p className="mt-6 text-center text-[12px] text-ink-faint">
         <Link to="/dashboard" className="hover:text-ink-soft">
-          Not now — go to Vox
+          Not now — go to ringwebai
         </Link>
       </p>
     </Shell>

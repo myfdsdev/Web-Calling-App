@@ -25,7 +25,7 @@ export default function RegisterAdminPage() {
     try {
       await registerAdmin(form);
       // Prompt the new admin to configure their workspace API keys on first load.
-      localStorage.setItem('vox.justSignedUp', '1');
+      localStorage.setItem('ringwebai.justSignedUp', '1');
       toast.success('Admin workspace created — welcome!');
       navigate('/dashboard', { replace: true });
     } catch (err) {

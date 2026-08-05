@@ -33,11 +33,11 @@ export async function sendEmail({ to, subject, html, text }) {
 /** Password-reset email: a single clear CTA button + a plain-text fallback link. */
 export async function sendPasswordResetEmail({ to, name, resetUrl }) {
   const safeName = (name || 'there').replace(/[<>&]/g, '');
-  const subject = 'Reset your Vox password';
+  const subject = 'Reset your ringwebai password';
   const html = `
   <div style="margin:0;padding:24px;background:#0b0b0d;font-family:Inter,Segoe UI,Arial,sans-serif;color:#f4f4f5">
     <div style="max-width:480px;margin:0 auto;background:#141417;border:1px solid #1d1d20;border-radius:16px;padding:32px">
-      <div style="font-size:18px;font-weight:800;letter-spacing:-0.02em;margin-bottom:20px">Vox</div>
+      <div style="font-size:18px;font-weight:800;letter-spacing:-0.02em;margin-bottom:20px">ringwebai</div>
       <h1 style="font-size:20px;margin:0 0 12px">Reset your password</h1>
       <p style="font-size:14px;line-height:1.6;color:#8a8a90;margin:0 0 24px">
         Hi ${safeName}, we received a request to reset your password. Click the button below to choose a
@@ -54,7 +54,7 @@ export async function sendPasswordResetEmail({ to, name, resetUrl }) {
       </p>
     </div>
   </div>`;
-  const text = `Reset your Vox password\n\nHi ${safeName}, open this link to choose a new password (expires in 60 minutes, single use):\n${resetUrl}\n\nIf you didn't request this, ignore this email.`;
+  const text = `Reset your ringwebai password\n\nHi ${safeName}, open this link to choose a new password (expires in 60 minutes, single use):\n${resetUrl}\n\nIf you didn't request this, ignore this email.`;
 
   return sendEmail({ to, subject, html, text });
 }

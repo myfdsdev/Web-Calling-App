@@ -86,7 +86,7 @@ describe('Store bridge', () => {
     const originalEmail = { ...env.email };
     const originalFetch = global.fetch;
     const sends = [];
-    env.email = { provider: 'resend', resendApiKey: 'test-key', from: 'Vox <no-reply@test.dev>', replyTo: '' };
+    env.email = { provider: 'resend', resendApiKey: 'test-key', from: 'ringwebai <no-reply@test.dev>', replyTo: '' };
     global.fetch = async (url, options = {}) => {
       if (String(url).includes('api.resend.com')) {
         sends.push(JSON.parse(options.body));

@@ -16,14 +16,14 @@ export function FullPageLoader({ inline = false, label = 'Loading…' }) {
               className="w-1.5 rounded-full bg-primary"
               style={{
                 height: 10 + (i % 3) * 8,
-                animation: `voxbar 900ms ${i * 90}ms ease-in-out infinite`,
+                animation: `ringwebaibar 900ms ${i * 90}ms ease-in-out infinite`,
               }}
             />
           ))}
         </div>
         <p className="text-sm font-medium text-ink-soft">{label}</p>
       </div>
-      <style>{`@keyframes voxbar{0%,100%{transform:scaleY(0.5)}50%{transform:scaleY(1.4)}}`}</style>
+      <style>{`@keyframes ringwebaibar{0%,100%{transform:scaleY(0.5)}50%{transform:scaleY(1.4)}}`}</style>
     </div>
   );
 }

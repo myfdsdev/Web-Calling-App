@@ -1,4 +1,4 @@
-# Vox — Conversational Vapi Voice-Agent Studio
+# ringwebai — Conversational Web Voice-Agent Studio
 
 Build **Vapi voice agents through a guided AI chatbot** instead of a long form. Answer a few
 questions and the app generates the system prompt, greeting, voice configuration and business setup,

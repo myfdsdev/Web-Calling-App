@@ -10,7 +10,7 @@ const bool = (v, fallback = false) =>
 
 const nodeEnv = process.env.NODE_ENV || 'development';
 const resendApiKey = process.env.RESEND_API_KEY || '';
-const emailFrom = process.env.EMAIL_FROM || 'Vox <onboarding@resend.dev>';
+const emailFrom = process.env.EMAIL_FROM || 'ringwebai <onboarding@resend.dev>';
 const emailProvider = (
   process.env.EMAIL_PROVIDER ||
   (nodeEnv !== 'test' && resendApiKey ? 'resend' : 'none')
@@ -24,8 +24,8 @@ export const env = {
 
   // Identity of THIS app — surfaced in the store-bridge manifest and emails so a
   // single store-side reader can tell one app in the suite from another.
-  appId: process.env.APP_ID || 'vox',
-  appName: process.env.APP_NAME || 'Vox',
+  appId: process.env.APP_ID || 'ringwebai',
+  appName: process.env.APP_NAME || 'ringwebai',
 
   clientUrls: (process.env.CLIENT_URL || 'http://localhost:5173')
     .split(',')

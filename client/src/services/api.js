@@ -4,8 +4,8 @@ const baseURL = import.meta.env.VITE_API_URL || '/api';
 
 export const api = axios.create({ baseURL });
 
-const TOKEN_KEY = 'vox.token';
-const WORKSPACE_KEY = 'vox.workspace';
+const TOKEN_KEY = 'ringwebai.token';
+const WORKSPACE_KEY = 'ringwebai.workspace';
 
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY);
@@ -46,14 +46,14 @@ api.interceptors.response.use(
       setToken(null);
       // Let route guards react; avoid hard redirect loops on the auth pages.
       if (!['/login', '/signup'].includes(window.location.pathname)) {
-        window.dispatchEvent(new CustomEvent('vox:session-expired'));
+        window.dispatchEvent(new CustomEvent('ringwebai:session-expired'));
       }
     }
     // The active workspace is gone (member removed, or workspace deleted). Drop it
     // and let the app fall back to the personal workspace.
     if (error.response?.status === 403 && code === 'WORKSPACE_ACCESS_REVOKED') {
       setWorkspaceId(null);
-      window.dispatchEvent(new CustomEvent('vox:workspace-invalid'));
+      window.dispatchEvent(new CustomEvent('ringwebai:workspace-invalid'));
     }
     return Promise.reject(Object.assign(error, { normalizedMessage: message, code }));
   }

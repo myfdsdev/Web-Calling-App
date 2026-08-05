@@ -102,11 +102,11 @@ export default function App() {
       ws.load();
       navigate('/dashboard');
     };
-    window.addEventListener('vox:session-expired', onExpired);
-    window.addEventListener('vox:workspace-invalid', onWorkspaceInvalid);
+    window.addEventListener('ringwebai:session-expired', onExpired);
+    window.addEventListener('ringwebai:workspace-invalid', onWorkspaceInvalid);
     return () => {
-      window.removeEventListener('vox:session-expired', onExpired);
-      window.removeEventListener('vox:workspace-invalid', onWorkspaceInvalid);
+      window.removeEventListener('ringwebai:session-expired', onExpired);
+      window.removeEventListener('ringwebai:workspace-invalid', onWorkspaceInvalid);
     };
   }, [navigate]);
 

@@ -11,7 +11,7 @@ const uid = () => `local_${Math.random().toString(36).slice(2)}_${performance.no
  * navigating away (React unmount runs, a refresh doesn't) clears it — so the
  * next visit to "Create Agent" always starts a brand-new agent.
  */
-const ACTIVE_DRAFT_KEY = 'vox.activeDraftId';
+const ACTIVE_DRAFT_KEY = 'ringwebai.activeDraftId';
 const readActiveDraft = () => {
   try {
     return sessionStorage.getItem(ACTIVE_DRAFT_KEY) || null;

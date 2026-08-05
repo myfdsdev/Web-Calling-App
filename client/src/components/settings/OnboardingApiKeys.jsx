@@ -14,12 +14,12 @@ export function OnboardingApiKeys() {
   const canManage = Boolean(active?.permissions?.includes('apikeys:manage'));
 
   useEffect(() => {
-    if (localStorage.getItem('vox.justSignedUp') !== '1') return;
+    if (localStorage.getItem('ringwebai.justSignedUp') !== '1') return;
     // Wait until the active workspace is known. Only prompt when the user can
     // actually manage its keys (a normal signup lands on their own workspace; a
     // signup that came through an invite lands on a team they can't configure).
     if (!active) return;
-    localStorage.removeItem('vox.justSignedUp');
+    localStorage.removeItem('ringwebai.justSignedUp');
     if (canManage) setOpen(true);
   }, [active, canManage]);
 

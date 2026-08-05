@@ -28,8 +28,8 @@ export default function SignupPage() {
     try {
       await register(form);
       // Trigger the API-keys onboarding popup on the first authed screen.
-      localStorage.setItem('vox.justSignedUp', '1');
-      toast.success('Account created — welcome to Vox!');
+      localStorage.setItem('ringwebai.justSignedUp', '1');
+      toast.success('Account created — welcome to ringwebai!');
       goHome();
     } catch (err) {
       setError(err.normalizedMessage || 'Unable to create account.');
@@ -42,8 +42,8 @@ export default function SignupPage() {
     setError('');
     try {
       await loginWithGoogle(credential);
-      localStorage.setItem('vox.justSignedUp', '1');
-      toast.success('Welcome to Vox!');
+      localStorage.setItem('ringwebai.justSignedUp', '1');
+      toast.success('Welcome to ringwebai!');
       goHome();
     } catch (err) {
       setError(err.normalizedMessage || 'Google sign-up failed.');

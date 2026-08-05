@@ -52,7 +52,7 @@ describe('Password reset', () => {
     env.email = {
       provider: 'resend',
       resendApiKey: 'test-key',
-      from: 'Vox <no-reply@test.dev>',
+      from: 'ringwebai <no-reply@test.dev>',
       replyTo: '',
     };
     global.fetch = async (url, options) => {
@@ -83,7 +83,7 @@ describe('Password reset', () => {
     env.email = {
       provider: 'resend',
       resendApiKey: 'test-key',
-      from: 'Vox <no-reply@test.dev>',
+      from: 'ringwebai <no-reply@test.dev>',
       replyTo: '',
     };
     global.fetch = async () => ({

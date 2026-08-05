@@ -150,7 +150,7 @@ export function ApiKeysDialog({ open, onClose, workspaceId, canManage = true, on
               {onboarding ? 'Connect your API keys' : 'API keys'}
             </h3>
             <p className="text-[12px] text-ink-soft">
-              Vox runs on <span className="font-semibold text-ink">your own</span> Vapi &amp; Gemini
+              ringwebai runs on <span className="font-semibold text-ink">your own</span> Vapi &amp; Gemini
               accounts — usage is billed to you by those providers.
             </p>
           </div>

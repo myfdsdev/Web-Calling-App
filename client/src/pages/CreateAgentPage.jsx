@@ -110,7 +110,7 @@ export default function CreateAgentPage() {
           </span>
           <h2 className="text-section font-bold text-ink">Add your API keys to build agents</h2>
           <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-            Vox runs on your own Vapi &amp; Gemini accounts. Configure this workspace’s keys and the
+            ringwebai runs on your own Vapi &amp; Gemini accounts. Configure this workspace’s keys and the
             agent builder will open right up.
           </p>
           <div className="mt-6 flex items-center justify-center gap-2">
