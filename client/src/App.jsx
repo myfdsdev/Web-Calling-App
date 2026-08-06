@@ -132,14 +132,11 @@ export default function App() {
               </PublicOnly>
             }
           />
-          <Route
-            path="/register-admin"
-            element={
-              <PublicOnly>
-                <RegisterAdminPage />
-              </PublicOnly>
-            }
-          />
+          {/* Admin signup — deliberately NOT PublicOnly. It stays reachable with a
+              session already in local storage, so an existing user can provision a
+              separate admin account without signing out first. Submitting swaps the
+              active session over to the newly created admin. */}
+          <Route path="/register-admin" element={<RegisterAdminPage />} />
           <Route
             path="/forgot-password"
             element={

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { authService } from '../services/authService.js';
+import { useWorkspaceStore } from './workspaceStore.js';
 import { getToken, setToken } from '../services/api.js';
 
 export const useAuthStore = create((set) => ({
@@ -46,6 +47,11 @@ export const useAuthStore = create((set) => ({
 
   async registerAdmin(payload) {
     const { token, user } = await authService.registerAdmin(payload);
+    // /register-admin is reachable while already signed in, so this token can
+    // replace a *different* account's session. Drop the old workspace state —
+    // otherwise the stale x-workspace-id would be sent for the new admin (403)
+    // and ProtectedLayout would skip the "create your workspace" gate.
+    useWorkspaceStore.getState().reset();
     setToken(token);
     set({ user, status: 'authed', hydrated: true });
     return user;
