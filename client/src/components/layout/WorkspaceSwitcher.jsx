@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
-import { Check, ChevronsUpDown, Plus, Users, LogOut, Building2, KeyRound } from 'lucide-react';
+import { Check, ChevronsUpDown, Plus, LogOut, Building2, KeyRound } from 'lucide-react';
 import { cn } from '../../lib/cn.js';
 import { useAuthStore } from '../../stores/authStore.js';
 import { useWorkspaceStore } from '../../stores/workspaceStore.js';
@@ -178,16 +178,6 @@ export function WorkspaceSwitcher() {
             >
               <Plus className="h-4 w-4 text-ink-soft" />
               New workspace
-            </button>
-            <button
-              onClick={() => {
-                setOpen(false);
-                navigate('/team');
-              }}
-              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium text-ink transition-colors hover:bg-white/[0.06]"
-            >
-              <Users className="h-4 w-4 text-ink-soft" />
-              Manage team
             </button>
             {canManageKeys && (
               <button
