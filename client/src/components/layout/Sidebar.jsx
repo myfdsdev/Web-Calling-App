@@ -21,7 +21,7 @@ const NAV = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/agents', label: 'Agents', icon: Bot, end: false },
   { to: '/leads', label: 'Leads', icon: Users, end: false },
-  { to: '/team', label: 'Team', icon: UsersRound, end: false },
+  { to: '/team', label: 'Admin', icon: UsersRound, end: false },
 ];
 
 function Logo({ className }) {
