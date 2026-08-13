@@ -17,7 +17,7 @@ export const DEMO_VIDEO_URL =
 /** Copy shown above/below the player. */
 export const DEMO_VIDEO_TITLE = 'Welcome to ringwebai';
 export const DEMO_VIDEO_SUBTITLE =
-  'A quick tour of how to build a web voice  voice agent, share it, and turn every conversation into a lead.';
+  'A quick tour of how to build a web voice agent, share it, and turn every conversation into a lead.';
 
 /**
  * Pull the 11-character video id out of any YouTube URL shape. Returns '' for
