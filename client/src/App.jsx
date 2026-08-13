@@ -8,6 +8,7 @@ import { CreateWorkspaceGate } from './components/workspace/CreateWorkspaceGate.
 import { AccessDeniedGate } from './components/workspace/AccessDeniedGate.jsx';
 import { useAuthStore } from './stores/authStore.js';
 import { useWorkspaceStore } from './stores/workspaceStore.js';
+import { useIsWorkspaceOwner } from './hooks/useWorkspaces.js';
 import { FullPageLoader } from './components/common/FullPageLoader.jsx';
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage.jsx'));
@@ -67,6 +68,15 @@ function ProtectedLayout() {
       <DemoVideoPopup />
     </div>
   );
+}
+
+/**
+ * Owner-only routes. Hiding the sidebar link isn't a guard — an invited user can
+ * still type /team — so the route sends them back to the dashboard. Safe to read
+ * the role here: ProtectedLayout blocks until workspaces have loaded.
+ */
+function OwnerOnly() {
+  return useIsWorkspaceOwner() ? <Outlet /> : <Navigate to="/dashboard" replace />;
 }
 
 function PublicOnly({ children }) {
@@ -161,7 +171,9 @@ export default function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/agents" element={<AgentsPage />} />
             <Route path="/leads" element={<LeadsPage />} />
-            <Route path="/team" element={<TeamPage />} />
+            <Route element={<OwnerOnly />}>
+              <Route path="/team" element={<TeamPage />} />
+            </Route>
             <Route path="/billing" element={<BillingPage />} />
             <Route path="/agents/create" element={<CreateAgentPage />} />
             <Route path="/agents/:agentId" element={<AgentDetailsPage />} />

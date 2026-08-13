@@ -11,7 +11,10 @@ export function OnboardingApiKeys() {
   const active = useActiveWorkspace();
   const [open, setOpen] = useState(false);
 
-  const canManage = Boolean(active?.permissions?.includes('apikeys:manage'));
+  // Owner-only, to match the rest of the API-keys surface: an invited user is
+  // never prompted for keys they aren't shown a way back to.
+  const canManage =
+    active?.role === 'owner' && Boolean(active?.permissions?.includes('apikeys:manage'));
 
   useEffect(() => {
     if (localStorage.getItem('ringwebai.justSignedUp') !== '1') return;

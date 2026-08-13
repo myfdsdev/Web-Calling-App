@@ -17,6 +17,19 @@ export function useCan(permission) {
   return Boolean(active?.permissions?.includes(permission));
 }
 
+/**
+ * True only for the account that owns the active workspace.
+ *
+ * This is the line between "runs this account" and "was invited into it", and it
+ * gates the owner-only surfaces: the Admin page, New workspace, and API keys.
+ * Deliberately role-based rather than permission-based — the `admin` role also
+ * carries members:manage and apikeys:manage, but someone who arrived through an
+ * invite still shouldn't be shown the controls for the account they joined.
+ */
+export function useIsWorkspaceOwner() {
+  return useActiveWorkspace()?.role === 'owner';
+}
+
 export function useWorkspaceDetails(workspaceId) {
   return useQuery({
     queryKey: ['workspace', workspaceId],

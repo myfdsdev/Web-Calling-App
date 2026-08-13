@@ -94,7 +94,11 @@ export function WorkspaceSwitcher() {
   const qc = useQueryClient();
 
   const active = workspaces.find((w) => w.id === activeId) || workspaces[0] || null;
-  const canManageKeys = Boolean(active?.permissions?.includes('apikeys:manage'));
+  // Owner-only surfaces. Someone who joined through an invite is here to use the
+  // account, not to reshape it — no spinning up their own workspaces, no reaching
+  // the keys that pay for every call the workspace makes.
+  const isOwner = active?.role === 'owner';
+  const canManageKeys = isOwner && Boolean(active?.permissions?.includes('apikeys:manage'));
 
   useEffect(() => {
     const onClick = (e) => ref.current && !ref.current.contains(e.target) && setOpen(false);
@@ -167,29 +171,35 @@ export function WorkspaceSwitcher() {
               ))}
             </div>
 
-            <div className="my-1 h-px bg-line" />
+            {/* Whole block is owner-only — including its divider, so an invited
+                user doesn't get two rules stacked with nothing between them. */}
+            {isOwner && (
+              <>
+                <div className="my-1 h-px bg-line" />
 
-            <button
-              onClick={() => {
-                setOpen(false);
-                setCreating(true);
-              }}
-              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium text-ink transition-colors hover:bg-white/[0.06]"
-            >
-              <Plus className="h-4 w-4 text-ink-soft" />
-              New workspace
-            </button>
-            {canManageKeys && (
-              <button
-                onClick={() => {
-                  setOpen(false);
-                  setApiKeysOpen(true);
-                }}
-                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium text-ink transition-colors hover:bg-white/[0.06]"
-              >
-                <KeyRound className="h-4 w-4 text-ink-soft" />
-                API keys
-              </button>
+                <button
+                  onClick={() => {
+                    setOpen(false);
+                    setCreating(true);
+                  }}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium text-ink transition-colors hover:bg-white/[0.06]"
+                >
+                  <Plus className="h-4 w-4 text-ink-soft" />
+                  New workspace
+                </button>
+                {canManageKeys && (
+                  <button
+                    onClick={() => {
+                      setOpen(false);
+                      setApiKeysOpen(true);
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium text-ink transition-colors hover:bg-white/[0.06]"
+                  >
+                    <KeyRound className="h-4 w-4 text-ink-soft" />
+                    API keys
+                  </button>
+                )}
+              </>
             )}
 
             <div className="my-1 h-px bg-line" />

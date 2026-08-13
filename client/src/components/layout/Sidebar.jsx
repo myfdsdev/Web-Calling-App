@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/cn.js';
 import { useMyBilling } from '../../hooks/useBilling.js';
+import { useIsWorkspaceOwner } from '../../hooks/useWorkspaces.js';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher.jsx';
 import { DEMO_VIDEO_ID } from '../../config/demoVideo.js';
 import { OPEN_DEMO_EVENT } from '../onboarding/DemoVideoPopup.jsx';
@@ -24,7 +25,9 @@ const NAV = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/agents', label: 'Agents', icon: Bot, end: false },
   { to: '/leads', label: 'Leads', icon: Users, end: false },
-  { to: '/team', label: 'Admin', icon: UsersRound, end: false },
+  // Owner-only — someone who joined through an invite never sees it. The /team
+  // route is guarded too, so the link isn't the only thing standing in the way.
+  { to: '/team', label: 'Admin', icon: UsersRound, end: false, ownerOnly: true },
 ];
 
 function Logo({ className }) {
@@ -122,6 +125,7 @@ function SectionLabel({ children }) {
 
 function SidebarContent({ onNavigate }) {
   const navigate = useNavigate();
+  const isOwner = useIsWorkspaceOwner();
 
   return (
     <div className="flex h-full flex-col">
@@ -148,7 +152,7 @@ function SidebarContent({ onNavigate }) {
       {/* Nav */}
       <nav className="mt-3 flex-1 overflow-y-auto px-3 pb-4">
         <div className="flex flex-col gap-0.5">
-          {NAV.map((item) => (
+          {NAV.filter((item) => isOwner || !item.ownerOnly).map((item) => (
             <NavItem key={item.to} {...item} onNavigate={onNavigate} />
           ))}
         </div>
