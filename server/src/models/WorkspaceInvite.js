@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import crypto from 'crypto';
-import { ASSIGNABLE_ROLES } from '../config/roles.js';
+import { STORABLE_ROLES } from '../config/roles.js';
 
 export const INVITE_TTL_DAYS = 7;
 
@@ -22,7 +22,9 @@ const workspaceInviteSchema = new mongoose.Schema(
       index: true,
     },
     email: { type: String, required: true, lowercase: true, trim: true, index: true },
-    role: { type: String, enum: ASSIGNABLE_ROLES, default: 'member' },
+    // STORABLE_ROLES, not ASSIGNABLE_ROLES — an invite written back when `admin`
+    // was still offered must stay saveable (accepting one flips status).
+    role: { type: String, enum: STORABLE_ROLES, default: 'member' },
 
     token: { type: String, required: true, unique: true, index: true },
 

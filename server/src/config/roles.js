@@ -12,8 +12,20 @@
 
 export const ROLES = ['owner', 'admin', 'member', 'viewer'];
 
-/** Roles that can be handed out through an invite — `owner` is never one of them. */
-export const ASSIGNABLE_ROLES = ['admin', 'member', 'viewer'];
+/**
+ * Roles that can be handed out through an invite or a role change. `owner` is
+ * never one of them, and neither is `admin`: the owner runs the account, and
+ * people who join by invite are here to build agents and work leads, not to
+ * manage the team or reach the workspace's API keys.
+ */
+export const ASSIGNABLE_ROLES = ['member', 'viewer'];
+
+/**
+ * Every non-owner role a stored membership or invite may legitimately hold.
+ * Wider than ASSIGNABLE_ROLES on purpose — `admin` is no longer offered anywhere
+ * in the UI, but rows written before that must still load and save.
+ */
+export const STORABLE_ROLES = ['admin', 'member', 'viewer'];
 
 export const ROLE_LABELS = {
   owner: 'Owner',
