@@ -1,6 +1,6 @@
 /**
  * Product demo video — shown in a popup the first time someone signs in, and
- * re-openable any time from "Watch demo" in the sidebar.
+ * re-openable any time from "Training video" in the sidebar.
  *
  * ── HOW TO SET IT ──────────────────────────────────────────────────────────
  * Paste the YouTube link into DEMO_VIDEO_URL below (watch / youtu.be / shorts /

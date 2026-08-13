@@ -74,7 +74,7 @@ function WatchDemoItem({ onNavigate }) {
       className={cn(ITEM_BASE, ITEM_IDLE, 'w-full text-left focus-ring')}
     >
       <PlayCircle className="h-[18px] w-[18px]" />
-      Watch demo
+      Training video
     </button>
   );
 }

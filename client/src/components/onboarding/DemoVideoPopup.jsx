@@ -8,7 +8,7 @@ const SEEN_KEY = 'ringwebai.demoSeen';
 /**
  * Flip to true to pop the demo on EVERY sign-in. Default is once per account:
  * a returning user shouldn't have to dismiss the same video every morning —
- * "Watch demo" in the sidebar re-opens it whenever they want it.
+ * "Training video" in the sidebar re-opens it whenever they want it.
  */
 const SHOW_EVERY_LOGIN = false;
 
@@ -38,7 +38,7 @@ export function DemoVideoPopup() {
     return () => clearTimeout(timer);
   }, [userId, freshSignup]);
 
-  // Sidebar "Watch demo" — works regardless of the seen flag.
+  // Sidebar "Training video" — works regardless of the seen flag.
   useEffect(() => {
     const onOpen = () => setOpen(true);
     window.addEventListener(OPEN_DEMO_EVENT, onOpen);
