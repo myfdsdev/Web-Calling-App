@@ -8,6 +8,7 @@ import {
   UsersRound,
   Zap,
   Plus,
+  PlayCircle,
   Search,
   Menu,
   X,
@@ -15,6 +16,8 @@ import {
 import { cn } from '../../lib/cn.js';
 import { useMyBilling } from '../../hooks/useBilling.js';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher.jsx';
+import { DEMO_VIDEO_ID } from '../../config/demoVideo.js';
+import { OPEN_DEMO_EVENT } from '../onboarding/DemoVideoPopup.jsx';
 
 
 const NAV = [
@@ -38,24 +41,41 @@ function Logo({ className }) {
   );
 }
 
+// Shared so the non-route "Watch demo" button sits flush with the real nav links.
+const ITEM_BASE =
+  'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[14px] font-medium transition-colors';
+const ITEM_ACTIVE = 'border border-white/10 bg-white/[0.07] text-ink';
+const ITEM_IDLE = 'border border-transparent text-ink-soft hover:bg-white/[0.04] hover:text-ink';
+
 function NavItem({ to, label, icon: Icon, end, onNavigate }) {
   return (
     <NavLink
       to={to}
       end={end}
       onClick={onNavigate}
-      className={({ isActive }) =>
-        cn(
-          'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[14px] font-medium transition-colors',
-          isActive
-            ? 'border border-white/10 bg-white/[0.07] text-ink'
-            : 'border border-transparent text-ink-soft hover:bg-white/[0.04] hover:text-ink'
-        )
-      }
+      className={({ isActive }) => cn(ITEM_BASE, isActive ? ITEM_ACTIVE : ITEM_IDLE)}
     >
       <Icon className="h-[18px] w-[18px]" />
       {label}
     </NavLink>
+  );
+}
+
+/** Re-opens the demo popup mounted in the protected layout. Hidden when unset. */
+function WatchDemoItem({ onNavigate }) {
+  if (!DEMO_VIDEO_ID) return null;
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        onNavigate?.();
+        window.dispatchEvent(new Event(OPEN_DEMO_EVENT));
+      }}
+      className={cn(ITEM_BASE, ITEM_IDLE, 'w-full text-left focus-ring')}
+    >
+      <PlayCircle className="h-[18px] w-[18px]" />
+      Watch demo
+    </button>
   );
 }
 
@@ -135,6 +155,13 @@ function SidebarContent({ onNavigate }) {
 
         <SectionLabel>Create</SectionLabel>
         <NavItem to="/agents/create" label="New Agent" icon={Plus} onNavigate={onNavigate} />
+
+        {DEMO_VIDEO_ID && (
+          <>
+            <SectionLabel>Learn</SectionLabel>
+            <WatchDemoItem onNavigate={onNavigate} />
+          </>
+        )}
       </nav>
 
       {/* Footer: live credit balance pinned to the bottom */}

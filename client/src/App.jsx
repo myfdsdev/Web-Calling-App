@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, Outlet, useLocation, useNavigate } from 'react
 import { AnimatePresence } from 'framer-motion';
 import { Sidebar } from './components/layout/Sidebar.jsx';
 import { OnboardingApiKeys } from './components/settings/OnboardingApiKeys.jsx';
+import { DemoVideoPopup } from './components/onboarding/DemoVideoPopup.jsx';
 import { CreateWorkspaceGate } from './components/workspace/CreateWorkspaceGate.jsx';
 import { AccessDeniedGate } from './components/workspace/AccessDeniedGate.jsx';
 import { useAuthStore } from './stores/authStore.js';
@@ -63,6 +64,7 @@ function ProtectedLayout() {
         </main>
       </div>
       <OnboardingApiKeys />
+      <DemoVideoPopup />
     </div>
   );
 }
