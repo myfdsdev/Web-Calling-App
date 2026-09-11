@@ -38,8 +38,8 @@ export const register = asyncHandler(async (req, res) => {
 
 /**
  * POST /api/auth/register-admin
- * Self-serve signup that provisions the account on the "Admin" plan, so the new
- * user immediately owns a workspace they can invite users into and manage.
+ * Self-serve signup for an admin account — it creates one workspace, then invites
+ * users into it and manages them.
  */
 export const registerAdmin = asyncHandler(async (req, res) => {
   const { name, email, password } = registerSchema.parse(req.body);

@@ -76,10 +76,6 @@ export const callLeadSchema = z.object({
   sessionId: z.string().max(80).optional(),
 });
 
-/** Billing: switch plan / buy a credit pack. */
-export const planChangeSchema = z.object({ planId: z.string().min(1).max(40) });
-export const topUpSchema = z.object({ packId: z.string().min(1).max(40) });
-
 /** Owner lead update. */
 export const leadUpdateSchema = z.object({
   status: z.enum(['new', 'contacted', 'qualified', 'closed']).optional(),

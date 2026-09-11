@@ -4,8 +4,6 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { updateAgentSchema, publicChatSchema, callLeadSchema } from '../validators/agentValidator.js';
 import { chatWithAgent } from '../services/agentChatService.js';
 import { captureChatLead, captureCallLead } from '../services/leadService.js';
-import { CHAT_CREDITS_PER_MESSAGE, VOICE_CREDITS_PER_MINUTE } from '../config/plans.js';
-import { canAfford, spend } from '../services/creditService.js';
 import { SUPPORTED_VOICES, getVoiceById } from '../config/voices.js';
 import { buildSystemPrompt } from '../services/agentPromptService.js';
 import { generateSystemPrompt } from '../services/geminiAgentBuilderService.js';
@@ -184,13 +182,9 @@ export const getPublicAgent = asyncHandler(async (req, res) => {
   if (!agent || !agent.isPublic || agent.status === 'disabled') {
     throw new AppError('This voice agent is not available.', 404, 'AGENT_NOT_AVAILABLE');
   }
-  // Use the agent's workspace Vapi account (BYOK). Calls need a public key; when
-  // the workspace brings its own key the user pays Vapi directly so app credits
-  // don't gate — otherwise (system key) we still require an affordable minute.
+  // Use the agent's workspace Vapi account (BYOK). Calls only need a public key.
   const vapiConfig = await resolveVapiConfig(agent.workspaceId);
-  const callsEnabled =
-    Boolean(vapiConfig.publicKey) &&
-    (vapiConfig.isByo || (await canAfford(agent.userId, VOICE_CREDITS_PER_MINUTE)));
+  const callsEnabled = Boolean(vapiConfig.publicKey);
   return ok(res, {
     agent: agent.toPublicView(),
     vapiPublicKey: vapiConfig.publicKey || '',
@@ -211,10 +205,8 @@ export const publicChat = asyncHandler(async (req, res) => {
   const { messages, sessionId } = publicChatSchema.parse(req.body);
 
   // BYOK: when the workspace brings its own Gemini key the visitor's chat runs on
-  // the owner's account — no app credits are charged or checked. Only the system-
-  // key path (the app pays) meters credits.
+  // the owner's account.
   const gemini = await resolveGeminiConfig(agent.workspaceId);
-  const mustCharge = !gemini.isByo;
 
   // Strict BYOK with no workspace Gemini key: there is nothing to generate a
   // reply with (system keys are off), so the widget is unavailable — capture the
@@ -227,23 +219,7 @@ export const publicChat = asyncHandler(async (req, res) => {
     });
   }
 
-  // System-key path with no balance: still record the lead, but don't spend to reply.
-  if (mustCharge && !(await canAfford(agent.userId, CHAT_CREDITS_PER_MESSAGE))) {
-    await captureChatLead({ agent, sessionId, messages });
-    return ok(res, {
-      reply: "Thanks for reaching out! I'm unavailable right now — please leave your details and the team will follow up.",
-      unavailable: true,
-    });
-  }
-
   const reply = await chatWithAgent(agent, messages, gemini);
-  if (mustCharge) {
-    await spend(agent.userId, CHAT_CREDITS_PER_MESSAGE, {
-      source: 'chat',
-      reason: 'Chat reply',
-      agentId: agent._id,
-    });
-  }
   // Capture / update the lead for this chat session (never blocks the reply).
   await captureChatLead({ agent, sessionId, messages: [...messages, { role: 'assistant', content: reply }] });
   return ok(res, { reply });

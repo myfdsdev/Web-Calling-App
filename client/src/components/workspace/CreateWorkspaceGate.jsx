@@ -43,7 +43,7 @@ export function CreateWorkspaceGate() {
         <h1 className="mt-5 text-2xl font-bold tracking-tight text-ink">Create your workspace</h1>
         <p className="mt-2 text-sm leading-relaxed text-ink-soft">
           Name your workspace to start using the app. This is where you’ll build agents, invite users,
-          and manage them. You get one workspace on the Admin plan.
+          and manage them. As an admin, you get one workspace.
         </p>
 
         <form onSubmit={submit} className="mt-6 space-y-4">

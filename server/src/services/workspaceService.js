@@ -12,7 +12,6 @@ import { Lead } from '../models/Lead.js';
 import { AgentDraft } from '../models/AgentDraft.js';
 import { AppError } from '../utils/apiResponse.js';
 import { ROLE_RANK, permissionsFor } from '../config/roles.js';
-import { getPlan } from '../config/plans.js';
 import { env } from '../config/env.js';
 
 /** Docs created before workspaces existed carry no workspaceId. */
@@ -55,7 +54,7 @@ export async function ensurePersonalWorkspace(userOrId) {
   const user = userOrId?.name ? userOrId : await User.findById(userId);
   if (!user) return null;
 
-  // Admin-plan accounts do NOT get an auto workspace — they must create their one
+  // Admin accounts do NOT get an auto workspace — they must create their one
   // workspace explicitly, and app access is gated until they do.
   if (user.plan === 'admin') return null;
 
@@ -89,17 +88,13 @@ export function countMembers(workspaceId) {
   return WorkspaceMember.countDocuments({ workspaceId });
 }
 
-/** Members + still-open invites — what a plan's seat allowance is measured against. */
-export async function countSeats(workspaceId) {
-  const [members, pending] = await Promise.all([
-    countMembers(workspaceId),
-    WorkspaceInvite.countDocuments({
-      workspaceId,
-      status: 'pending',
-      expiresAt: { $gt: new Date() },
-    }),
-  ]);
-  return { members, pending, used: members + pending };
+/** Invites that are still open — pending and not yet expired. */
+export function countPendingInvites(workspaceId) {
+  return WorkspaceInvite.countDocuments({
+    workspaceId,
+    status: 'pending',
+    expiresAt: { $gt: new Date() },
+  });
 }
 
 /** Every workspace the user belongs to, personal one first. */
@@ -202,7 +197,7 @@ export async function createWorkspace(userId, { name, color }) {
   if (isAdmin) {
     const owned = await Workspace.countDocuments({ ownerId: userId });
     if (owned >= 1) {
-      throw new AppError('Your Admin plan includes a single workspace.', 403, 'WORKSPACE_LIMIT');
+      throw new AppError('An admin account includes a single workspace.', 403, 'WORKSPACE_LIMIT');
     }
   }
 
@@ -236,23 +231,6 @@ export function inviteUrlFor(token) {
   return `${env.appUrl}/invite/${token}`;
 }
 
-/** Seat allowance comes from the OWNER's plan — they are the billing account. */
-async function assertSeatAvailable(workspace) {
-  const owner = await User.findById(workspace.ownerId);
-  const plan = getPlan(owner?.plan);
-  const { used } = await countSeats(workspace._id);
-  if (used >= plan.maxMembers) {
-    throw new AppError(
-      plan.maxMembers <= 1
-        ? `The ${plan.name} plan is single-user. Upgrade to invite teammates.`
-        : `The ${plan.name} plan covers ${plan.maxMembers} people. Upgrade to add more.`,
-      403,
-      'PLAN_MEMBER_LIMIT'
-    );
-  }
-  return plan;
-}
-
 /**
  * Invite someone by email. Re-inviting an address that already has a pending
  * invite refreshes it (new token + expiry) instead of piling up duplicates.
@@ -273,9 +251,6 @@ export async function createInvite({ workspace, inviter, email, role }) {
     email: normalized,
     status: 'pending',
   });
-
-  // Only charge a seat for a genuinely new invite — refreshing one is free.
-  if (!pending) await assertSeatAvailable(workspace);
 
   const invite = pending || new WorkspaceInvite({ workspaceId: workspace._id, email: normalized });
   invite.role = role;
@@ -334,9 +309,6 @@ export async function acceptInvite({ token, user }) {
     await invite.save();
     return { workspace, membership: existing, alreadyMember: true };
   }
-
-  // The plan may have been downgraded since the invite went out.
-  await assertSeatAvailable(workspace);
 
   const membership = await WorkspaceMember.create({
     workspaceId: workspace._id,

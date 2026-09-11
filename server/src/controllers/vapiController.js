@@ -2,8 +2,6 @@ import { Agent } from '../models/Agent.js';
 import { ok } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { env } from '../config/env.js';
-import { creditsForCallSeconds } from '../config/plans.js';
-import { spend } from '../services/creditService.js';
 import { resolveVapiConfig } from '../services/apiKeyService.js';
 
 /**
@@ -76,24 +74,6 @@ export const webhook = asyncHandler(async (req, res) => {
           agent.stats.totalCallSeconds += seconds;
           agent.stats.lastCallAt = new Date();
           await agent.save();
-
-          // BYOK: if the workspace runs on its own Vapi account, the user already
-          // paid Vapi directly — the app charges no credits. Only meter the
-          // system-key path (where the app fronts the cost).
-          const vapiConfig = await resolveVapiConfig(agent.workspaceId);
-          const cost = vapiConfig.isByo ? 0 : creditsForCallSeconds(seconds);
-          if (cost > 0) {
-            const details = {
-              source: 'call',
-              reason: `Voice call · ${Math.ceil(seconds / 60)} min`,
-              agentId: agent._id,
-              meta: { seconds },
-            };
-            const charged = await spend(agent.userId, cost, details);
-            if (!charged.ok && charged.balance > 0) {
-              await spend(agent.userId, charged.balance, { ...details, reason: `${details.reason} (partial)` });
-            }
-          }
         }
       }
     }

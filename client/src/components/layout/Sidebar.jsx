@@ -6,7 +6,6 @@ import {
   Bot,
   Users,
   UsersRound,
-  Zap,
   Plus,
   PlayCircle,
   Search,
@@ -14,7 +13,6 @@ import {
   X,
 } from 'lucide-react';
 import { cn } from '../../lib/cn.js';
-import { useMyBilling } from '../../hooks/useBilling.js';
 import { useIsWorkspaceOwner } from '../../hooks/useWorkspaces.js';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher.jsx';
 import { DEMO_VIDEO_ID } from '../../config/demoVideo.js';
@@ -82,39 +80,6 @@ function WatchDemoItem({ onNavigate }) {
   );
 }
 
-/** Live credit balance — turns amber when the user is nearly out. */
-function CreditChip({ onNavigate }) {
-  const { data } = useMyBilling();
-  if (!data?.credits) return null;
-
-  const total = data.credits.total ?? 0;
-  const minutes = Math.floor(total / (data.rates?.voiceCreditsPerMinute || 10));
-  const low = total < (data.rates?.voiceCreditsPerMinute || 10) * 5; // under ~5 minutes
-
-  return (
-    <Link
-      to="/billing"
-      onClick={onNavigate}
-      className={cn(
-        'flex items-center gap-2.5 rounded-lg border px-2.5 py-2 transition-colors',
-        low
-          ? 'border-warning/30 bg-warning/[0.08] hover:bg-warning/[0.12]'
-          : 'border-line hover:bg-white/[0.04]'
-      )}
-    >
-      <Zap className={cn('h-4 w-4 flex-none', low ? 'text-warning' : 'text-primary')} />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] font-semibold text-ink">
-          {new Intl.NumberFormat().format(total)} credits
-        </p>
-        <p className="truncate text-[11px] text-ink-soft">
-          {data.plan?.name} · ~{minutes} min left
-        </p>
-      </div>
-    </Link>
-  );
-}
-
 function SectionLabel({ children }) {
   return (
     <p className="px-2.5 pb-1.5 pt-3 text-[11px] font-semibold uppercase tracking-wider text-ink-faint">
@@ -167,11 +132,6 @@ function SidebarContent({ onNavigate }) {
           </>
         )}
       </nav>
-
-      {/* Footer: live credit balance pinned to the bottom */}
-      <div className="border-t border-line p-3">
-        <CreditChip onNavigate={onNavigate} />
-      </div>
     </div>
   );
 }

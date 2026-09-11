@@ -17,14 +17,13 @@ import {
 import {
   listWorkspacesFor,
   createWorkspace as createWorkspaceRecord,
-  countSeats,
   countMembers,
+  countPendingInvites,
   assertOutranks,
   createInvite,
   inviteUrlFor,
 } from '../services/workspaceService.js';
 import { permissionsFor, ROLE_CATALOGUE, ROLE_RANK } from '../config/roles.js';
-import { getPlan } from '../config/plans.js';
 import { deleteAssistant } from '../services/vapiAssistantService.js';
 import { resolveVapiConfig, deleteWorkspaceKeys } from '../services/apiKeyService.js';
 import { sendEmail } from '../services/email/emailClient.js';
@@ -32,18 +31,16 @@ import { teamInvite } from '../services/email/templates.js';
 
 /** Everything the client needs to render one workspace and gate its UI. */
 async function workspaceView(workspace, role) {
-  const [owner, seats] = await Promise.all([
+  const [owner, memberCount, pendingInvites] = await Promise.all([
     User.findById(workspace.ownerId),
-    countSeats(workspace._id),
+    countMembers(workspace._id),
+    countPendingInvites(workspace._id),
   ]);
-  const plan = getPlan(owner?.plan);
   return workspace.toJSONView({
     role,
     permissions: permissionsFor(role),
-    memberCount: seats.members,
-    pendingInvites: seats.pending,
-    seats: { used: seats.used, max: plan.maxMembers },
-    plan: { id: plan.id, name: plan.name, maxMembers: plan.maxMembers },
+    memberCount,
+    pendingInvites,
     owner: owner ? { id: owner._id.toString(), name: owner.name, email: owner.email } : null,
   });
 }

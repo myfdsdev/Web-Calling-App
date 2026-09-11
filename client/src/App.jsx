@@ -14,7 +14,6 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage.jsx'));
 const AgentsPage = lazy(() => import('./pages/AgentsPage.jsx'));
 const LeadsPage = lazy(() => import('./pages/LeadsPage.jsx'));
 const TeamPage = lazy(() => import('./pages/TeamPage.jsx'));
-const BillingPage = lazy(() => import('./pages/BillingPage.jsx'));
 const CreateAgentPage = lazy(() => import('./pages/CreateAgentPage.jsx'));
 const AgentDetailsPage = lazy(() => import('./pages/AgentDetailsPage.jsx'));
 const EditAgentPage = lazy(() => import('./pages/EditAgentPage.jsx'));
@@ -170,7 +169,6 @@ export default function App() {
             <Route element={<OwnerOnly />}>
               <Route path="/team" element={<TeamPage />} />
             </Route>
-            <Route path="/billing" element={<BillingPage />} />
             <Route path="/agents/create" element={<CreateAgentPage />} />
             <Route path="/agents/:agentId" element={<AgentDetailsPage />} />
             <Route path="/agents/:agentId/edit" element={<EditAgentPage />} />
