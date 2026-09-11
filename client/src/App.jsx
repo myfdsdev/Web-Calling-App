@@ -5,7 +5,6 @@ import { Sidebar } from './components/layout/Sidebar.jsx';
 import { OnboardingApiKeys } from './components/settings/OnboardingApiKeys.jsx';
 import { DemoVideoPopup } from './components/onboarding/DemoVideoPopup.jsx';
 import { CreateWorkspaceGate } from './components/workspace/CreateWorkspaceGate.jsx';
-import { AccessDeniedGate } from './components/workspace/AccessDeniedGate.jsx';
 import { useAuthStore } from './stores/authStore.js';
 import { useWorkspaceStore } from './stores/workspaceStore.js';
 import { useIsWorkspaceOwner } from './hooks/useWorkspaces.js';
@@ -48,12 +47,9 @@ function ProtectedLayout() {
   if (!wsLoaded) return <FullPageLoader />;
 
   const isAdmin = user?.plan === 'admin';
-  // Invited into someone else's workspace = a workspace where you're not the owner.
-  const isInvited = workspaces.some((w) => w.role !== 'owner');
   // A fresh admin must create their (single) workspace before the app unlocks.
+  // Every other account already has a personal workspace, so it goes straight in.
   if (isAdmin && workspaces.length === 0) return <CreateWorkspaceGate />;
-  // A plain user who isn't an admin and hasn't been invited can't use this paid app.
-  if (!isAdmin && !isInvited) return <AccessDeniedGate />;
   return (
     <div className="min-h-full">
       <Sidebar />
