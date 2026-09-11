@@ -7,7 +7,7 @@ import { env } from '../config/env.js';
  * there is ONE place that decides whose key runs the request:
  *
  *   1. the workspace's own key (BYO)  → `isByo: true`,  the user pays the provider
- *   2. otherwise the system env key   → `isByo: false`, the app pays (credit model)
+ *   2. otherwise the system env key   → `isByo: false`, the app pays
  *   3. otherwise nothing configured   → the caller must surface a "configure keys" error
  *
  * In production the deployer simply leaves the system env keys unset, so every
@@ -42,8 +42,7 @@ export async function resolveVapiConfig(workspaceId) {
     return { privateKey: env.vapi.privateKey, publicKey: env.vapi.publicKey || '', baseUrl, isByo: false };
   }
   // No usable private key. A workspace public key may still exist (to call an
-  // already-created assistant). Under strict BYOK, treat as own-account (isByo)
-  // so nothing ever falls back to app credits.
+  // already-created assistant). Under strict BYOK, treat as own-account (isByo).
   const publicKey = keys?.vapiPublicKey || (systemAllowed ? env.vapi.publicKey : '') || '';
   return { privateKey: '', publicKey, baseUrl, isByo: env.requireByok ? true : Boolean(keys?.vapiPublicKey) };
 }
@@ -64,7 +63,7 @@ export async function resolveGeminiConfig(workspaceId) {
   if (systemAllowed && env.geminiApiKey) {
     return { apiKey: env.geminiApiKey, model: env.geminiModel, isByo: false, enabled: true };
   }
-  // Nothing usable. Under strict BYOK mark isByo so the app never charges credits.
+  // Nothing usable. Under strict BYOK it still counts as the workspace's own account.
   return { apiKey: '', model: env.geminiModel, isByo: Boolean(env.requireByok), enabled: false };
 }
 

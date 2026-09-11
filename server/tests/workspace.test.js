@@ -6,11 +6,6 @@ import { Agent } from '../src/models/Agent.js';
 /** Pull the raw token out of a returned invite link. */
 const tokenOf = (inviteUrl) => inviteUrl.split('/invite/')[1];
 
-/** Put `user` on a plan that allows teammates (free is single-seat). */
-async function upgradeToPro(user) {
-  await user.bearer(request(app).post('/api/billing/plan')).send({ planId: 'pro' });
-}
-
 describe('Workspaces, roles & invites', () => {
   let vapi;
   afterEach(() => {
@@ -40,19 +35,17 @@ describe('Workspaces, roles & invites', () => {
     expect(list.body.data.workspaces).toHaveLength(2); // personal + team
   });
 
-  it('refuses to invite on a single-seat (free) plan', async () => {
+  it('lets any account invite teammates — there is no seat limit', async () => {
     const owner = await makeUser();
     const ws = (await owner.bearer(request(app).post('/api/workspaces')).send({ name: 'Solo' })).body.data.workspace;
     const res = await owner
       .bearer(request(app).post(`/api/workspaces/${ws.id}/invites`))
       .send({ email: 'friend@test.dev', role: 'member' });
-    expect(res.status).toBe(403);
-    expect(res.body.code).toBe('PLAN_MEMBER_LIMIT');
+    expect(res.status).toBe(201);
   });
 
   it('invites a teammate who accepts and then shares the workspace', async () => {
     const owner = await makeUser();
-    await upgradeToPro(owner);
     const member = await makeUser();
 
     const ws = (await owner.bearer(request(app).post('/api/workspaces')).send({ name: 'Acme' })).body.data.workspace;
@@ -88,7 +81,6 @@ describe('Workspaces, roles & invites', () => {
 
   it("rejects an invite accepted by the wrong account", async () => {
     const owner = await makeUser();
-    await upgradeToPro(owner);
     const wrongPerson = await makeUser();
 
     const ws = (await owner.bearer(request(app).post('/api/workspaces')).send({ name: 'Acme' })).body.data.workspace;
@@ -104,7 +96,6 @@ describe('Workspaces, roles & invites', () => {
 
   it('shares agents across the workspace but hides them from outsiders', async () => {
     const owner = await makeUser();
-    await upgradeToPro(owner);
     const member = await makeUser();
     const outsider = await makeUser();
 
@@ -114,7 +105,7 @@ describe('Workspaces, roles & invites', () => {
       .send({ email: member.user.email, role: 'member' });
     await member.bearer(request(app).post(`/api/invites/${tokenOf(inv.body.data.invite.inviteUrl)}/accept`));
 
-    // An agent that lives in the workspace, billed to the owner.
+    // An agent that lives in the workspace, owned by the owner.
     await Agent.create({ userId: owner.user.id, workspaceId: ws.id, name: 'Shared Bot', status: 'active' });
 
     const asOwner = await owner.bearer(request(app).get('/api/agents').set('x-workspace-id', ws.id));
@@ -133,9 +124,8 @@ describe('Workspaces, roles & invites', () => {
     expect(asOutsider.body.code).toBe('WORKSPACE_ACCESS_REVOKED');
   });
 
-  it('lets a teammate build an agent that bills the owner', async () => {
+  it('lets a teammate build an agent that belongs to the owner', async () => {
     const owner = await makeUser();
-    await upgradeToPro(owner);
     const member = await makeUser();
 
     const ws = (await owner.bearer(request(app).post('/api/workspaces')).send({ name: 'Acme' })).body.data.workspace;
@@ -173,7 +163,7 @@ describe('Workspaces, roles & invites', () => {
     expect(created.status).toBe(201);
     expect(created.body.data.agent.createdByUserId).toBe(member.user.id);
 
-    // Billing account is the OWNER, not the teammate who built it.
+    // The owning account is the OWNER, not the teammate who built it.
     const doc = await Agent.findById(created.body.data.agent.id);
     expect(doc.userId.toString()).toBe(owner.user.id);
     expect(doc.workspaceId.toString()).toBe(ws.id);
@@ -181,7 +171,6 @@ describe('Workspaces, roles & invites', () => {
 
   it('enforces roles: a viewer cannot build, a member can', async () => {
     const owner = await makeUser();
-    await upgradeToPro(owner);
     const viewer = await makeUser();
 
     const ws = (await owner.bearer(request(app).post('/api/workspaces')).send({ name: 'Acme' })).body.data.workspace;
@@ -199,7 +188,6 @@ describe('Workspaces, roles & invites', () => {
 
   it('stops a member from inviting others', async () => {
     const owner = await makeUser();
-    await upgradeToPro(owner);
     const member = await makeUser();
 
     const ws = (await owner.bearer(request(app).post('/api/workspaces')).send({ name: 'Acme' })).body.data.workspace;
@@ -216,7 +204,6 @@ describe('Workspaces, roles & invites', () => {
 
   it('lets a member leave, and blocks deleting the personal workspace', async () => {
     const owner = await makeUser();
-    await upgradeToPro(owner);
     const member = await makeUser();
 
     const ws = (await owner.bearer(request(app).post('/api/workspaces')).send({ name: 'Acme' })).body.data.workspace;
@@ -244,7 +231,7 @@ describe('Workspaces, roles & invites', () => {
   });
 });
 
-describe('Admin plan — one workspace, gated access', () => {
+describe('Admin accounts — one workspace, gated access', () => {
   async function makeAdmin() {
     const email = `adm.${Math.floor(process.hrtime()[1] % 1e6)}.${Math.random().toString(36).slice(2, 6)}@test.dev`;
     const res = await request(app)

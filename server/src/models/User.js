@@ -1,13 +1,5 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
-import { DEFAULT_PLAN_ID, getPlan } from '../config/plans.js';
-
-/** First renewal date — one month from now. */
-function nextRenewal(from = new Date()) {
-  const d = new Date(from);
-  d.setMonth(d.getMonth() + 1);
-  return d;
-}
 
 const userSchema = new mongoose.Schema(
   {
@@ -32,14 +24,10 @@ const userSchema = new mongoose.Schema(
     googleId: { type: String, default: '', index: true },
     avatarUrl: { type: String, default: '' },
 
-    // ── Plan + credits ──────────────────────────────────────────────────────
-    plan: { type: String, default: DEFAULT_PLAN_ID, index: true },
-    // Credits from the monthly allowance (reset each cycle).
-    credits: { type: Number, default: () => getPlan(DEFAULT_PLAN_ID).credits, min: 0 },
-    // Purchased top-up credits — never reset, spent only after `credits` runs out.
-    bonusCredits: { type: Number, default: 0, min: 0 },
-    creditsRenewAt: { type: Date, default: () => nextRenewal() },
-    planUpdatedAt: { type: Date, default: Date.now },
+    // 'admin' marks an account created on /register-admin — it runs one workspace
+    // and invites people into it. Everyone else is a normal user. The key is still
+    // named `plan` so existing admin accounts carry over without a migration.
+    plan: { type: String, default: 'user', index: true },
   },
   { timestamps: true }
 );
@@ -60,11 +48,8 @@ userSchema.methods.toPublic = function toPublic() {
     name: this.name,
     email: this.email,
     plan: this.plan,
-    credits: (this.credits || 0) + (this.bonusCredits || 0),
     avatarUrl: this.avatarUrl,
   };
 };
-
-export { nextRenewal };
 
 export const User = mongoose.model('User', userSchema);

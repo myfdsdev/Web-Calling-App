@@ -3,14 +3,14 @@ import { genPublicId } from '../utils/ids.js';
 
 const agentSchema = new mongoose.Schema(
   {
-    // Billing account: always the WORKSPACE OWNER, so credits, leads and webhook
-    // charges land on the account that pays — even when a teammate built the agent.
+    // Owning account: always the WORKSPACE OWNER, so leads and webhook events land
+    // on the owner's account — even when a teammate built the agent.
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
 
     // The workspace the agent lives in (what visibility is scoped by). Nullable
     // only for pre-workspace agents until they're adopted into a personal one.
     workspaceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Workspace', index: true, default: null },
-    // Who actually created it — for display; billing never uses this.
+    // Who actually created it — for display only.
     createdByUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 
     name: { type: String, required: true, trim: true },

@@ -5,7 +5,6 @@ import { Sidebar } from './components/layout/Sidebar.jsx';
 import { OnboardingApiKeys } from './components/settings/OnboardingApiKeys.jsx';
 import { DemoVideoPopup } from './components/onboarding/DemoVideoPopup.jsx';
 import { CreateWorkspaceGate } from './components/workspace/CreateWorkspaceGate.jsx';
-import { AccessDeniedGate } from './components/workspace/AccessDeniedGate.jsx';
 import { useAuthStore } from './stores/authStore.js';
 import { useWorkspaceStore } from './stores/workspaceStore.js';
 import { useIsWorkspaceOwner } from './hooks/useWorkspaces.js';
@@ -15,7 +14,6 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage.jsx'));
 const AgentsPage = lazy(() => import('./pages/AgentsPage.jsx'));
 const LeadsPage = lazy(() => import('./pages/LeadsPage.jsx'));
 const TeamPage = lazy(() => import('./pages/TeamPage.jsx'));
-const BillingPage = lazy(() => import('./pages/BillingPage.jsx'));
 const CreateAgentPage = lazy(() => import('./pages/CreateAgentPage.jsx'));
 const AgentDetailsPage = lazy(() => import('./pages/AgentDetailsPage.jsx'));
 const EditAgentPage = lazy(() => import('./pages/EditAgentPage.jsx'));
@@ -48,12 +46,9 @@ function ProtectedLayout() {
   if (!wsLoaded) return <FullPageLoader />;
 
   const isAdmin = user?.plan === 'admin';
-  // Invited into someone else's workspace = a workspace where you're not the owner.
-  const isInvited = workspaces.some((w) => w.role !== 'owner');
   // A fresh admin must create their (single) workspace before the app unlocks.
+  // Every other account already has a personal workspace, so it goes straight in.
   if (isAdmin && workspaces.length === 0) return <CreateWorkspaceGate />;
-  // A plain user who isn't an admin and hasn't been invited can't use this paid app.
-  if (!isAdmin && !isInvited) return <AccessDeniedGate />;
   return (
     <div className="min-h-full">
       <Sidebar />
@@ -174,7 +169,6 @@ export default function App() {
             <Route element={<OwnerOnly />}>
               <Route path="/team" element={<TeamPage />} />
             </Route>
-            <Route path="/billing" element={<BillingPage />} />
             <Route path="/agents/create" element={<CreateAgentPage />} />
             <Route path="/agents/:agentId" element={<AgentDetailsPage />} />
             <Route path="/agents/:agentId/edit" element={<EditAgentPage />} />

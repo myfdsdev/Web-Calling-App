@@ -28,6 +28,16 @@ describe('Agents listing & ownership', () => {
     expect(listA.body.data.agents[0].vapiAssistantId).toBe('asst_a');
   });
 
+  it('has no cap on how many agents a user can create', async () => {
+    const user = await makeUser();
+    await createAgent(user, 'asst_one');
+    vapi.restore();
+    await createAgent(user, 'asst_two');
+
+    const list = await user.bearer(request(app).get('/api/agents'));
+    expect(list.body.data.agents).toHaveLength(2);
+  });
+
   it('filters by search term', async () => {
     const user = await makeUser();
     await createAgent(user, 'asst_s');

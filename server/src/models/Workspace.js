@@ -4,8 +4,7 @@ import mongoose from 'mongoose';
  * A workspace is the container everything belongs to: agents, drafts and leads
  * are scoped to one, and teammates are invited into one.
  *
- * `ownerId` is the billing account — plan, credits and the ledger all live on
- * that user, so every member of a workspace spends the owner's credits.
+ * `ownerId` is the account the workspace's agents and leads belong to.
  * Each account gets one `isPersonal` workspace automatically; it can be renamed
  * but never deleted, so a user always has somewhere to land.
  */

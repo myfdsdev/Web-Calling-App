@@ -74,9 +74,6 @@ function InviteDialog({ open, onClose, workspace, roles }) {
   const [lastInvite, setLastInvite] = useState(null);
   const invite = useInviteMember(workspace?.id);
 
-  const seatsLeft = workspace ? (workspace.seats?.max ?? 0) - (workspace.seats?.used ?? 0) : 0;
-  const full = seatsLeft <= 0;
-
   const submit = (e) => {
     e.preventDefault();
     if (!email.trim() || invite.isPending) return;
@@ -116,64 +113,57 @@ function InviteDialog({ open, onClose, workspace, roles }) {
           </div>
         </div>
 
-        {full ? (
-          <div className="rounded-xl border border-warning/30 bg-warning/[0.08] p-4 text-[13px] text-ink">
-            You’ve used all {workspace?.seats?.max} seats on the{' '}
-            <span className="font-semibold">{workspace?.plan?.name}</span> plan. Upgrade the plan to invite more people.
+        <form onSubmit={submit} className="space-y-4">
+          <div className="relative">
+            <Mail className="pointer-events-none absolute left-3.5 top-[38px] h-4 w-4 text-ink-soft" />
+            <Input
+              id="invite-email"
+              type="email"
+              label="Email address"
+              placeholder="teammate@company.com"
+              className="pl-10"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
           </div>
-        ) : (
-          <form onSubmit={submit} className="space-y-4">
-            <div className="relative">
-              <Mail className="pointer-events-none absolute left-3.5 top-[38px] h-4 w-4 text-ink-soft" />
-              <Input
-                id="invite-email"
-                type="email"
-                label="Email address"
-                placeholder="teammate@company.com"
-                className="pl-10"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
 
-            <div>
-              <p className="mb-2 block text-[13px] font-semibold text-ink">Role</p>
-              <div className="grid grid-cols-1 gap-2">
-                {(roles || []).map((r) => (
-                  <button
-                    key={r.id}
-                    type="button"
-                    onClick={() => setRole(r.id)}
+          <div>
+            <p className="mb-2 block text-[13px] font-semibold text-ink">Role</p>
+            <div className="grid grid-cols-1 gap-2">
+              {(roles || []).map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => setRole(r.id)}
+                  className={cn(
+                    'flex items-start gap-3 rounded-xl border px-3.5 py-2.5 text-left transition-all',
+                    role === r.id
+                      ? 'border-primary bg-primary-soft'
+                      : 'border-line bg-surface hover:border-line-strong'
+                  )}
+                >
+                  <span
                     className={cn(
-                      'flex items-start gap-3 rounded-xl border px-3.5 py-2.5 text-left transition-all',
-                      role === r.id
-                        ? 'border-primary bg-primary-soft'
-                        : 'border-line bg-surface hover:border-line-strong'
+                      'mt-0.5 flex h-4 w-4 flex-none items-center justify-center rounded-full border',
+                      role === r.id ? 'border-primary bg-primary' : 'border-line-strong'
                     )}
                   >
-                    <span
-                      className={cn(
-                        'mt-0.5 flex h-4 w-4 flex-none items-center justify-center rounded-full border',
-                        role === r.id ? 'border-primary bg-primary' : 'border-line-strong'
-                      )}
-                    >
-                      {role === r.id && <span className="h-1.5 w-1.5 rounded-full bg-[#0A0A0A]" />}
-                    </span>
-                    <span>
-                      <span className="block text-[13px] font-semibold text-ink">{r.label}</span>
-                      <span className="block text-[12px] text-ink-soft">{r.description}</span>
-                    </span>
-                  </button>
-                ))}
-              </div>
+                    {role === r.id && <span className="h-1.5 w-1.5 rounded-full bg-[#0A0A0A]" />}
+                  </span>
+                  <span>
+                    <span className="block text-[13px] font-semibold text-ink">{r.label}</span>
+                    <span className="block text-[12px] text-ink-soft">{r.description}</span>
+                  </span>
+                </button>
+              ))}
             </div>
+          </div>
 
-            <Button type="submit" size="md" className="w-full" loading={invite.isPending}>
-              Create invite link
-            </Button>
-          </form>
-        )}
+          <Button type="submit" size="md" className="w-full" loading={invite.isPending}>
+            Create invite link
+          </Button>
+        </form>
 
         {lastInvite?.inviteUrl && (
           <motion.div
@@ -279,7 +269,7 @@ export default function TeamPage() {
   const [toRevoke, setToRevoke] = useState(null);
   const [leaving, setLeaving] = useState(false);
 
-  // Full details (seats, plan, pendingInvites, permissions) — fall back to the
+  // Full details (memberCount, pendingInvites, permissions) — fall back to the
   // lighter store record until the fetch lands so the page never flashes empty.
   const detailsQ = useWorkspaceDetails(workspaceId);
   const active = detailsQ.data?.workspace || storeActive;
@@ -345,7 +335,7 @@ export default function TeamPage() {
         </div>
       </div>
 
-      {/* Seat usage */}
+      {/* Summary */}
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div className="flex items-center gap-2.5 rounded-xl border border-line bg-surface px-4 py-3">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.06] text-ink-soft">
@@ -353,10 +343,9 @@ export default function TeamPage() {
           </span>
           <div>
             <p className="text-[18px] font-bold leading-none text-ink">
-              {active.seats?.used ?? members.length}
-              <span className="text-ink-faint"> / {active.seats?.max ?? '—'}</span>
+              {membersQ.isSuccess ? members.length : active.memberCount ?? '—'}
             </p>
-            <p className="mt-0.5 text-[12px] text-ink-soft">Seats used</p>
+            <p className="mt-0.5 text-[12px] text-ink-soft">Members</p>
           </div>
         </div>
         <div className="flex items-center gap-2.5 rounded-xl border border-line bg-surface px-4 py-3">

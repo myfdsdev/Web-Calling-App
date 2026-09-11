@@ -33,8 +33,6 @@ import {
   generateSystemPrompt,
   suggestBusinessTypes,
 } from '../services/geminiAgentBuilderService.js';
-import { getPlan } from '../config/plans.js';
-import { getAccount } from '../services/creditService.js';
 import { buildAssistantPayload, createAssistant } from '../services/vapiAssistantService.js';
 import { resolveVapiConfig, resolveGeminiConfig } from '../services/apiKeyService.js';
 
@@ -398,19 +396,6 @@ export const createVapiAgent = asyncHandler(async (req, res) => {
     return ok(res, { agent: existingAgent.toJSONView(), alreadyCreated: true }, 'Agent already created.');
   }
 
-  // Enforce the allowance against the OWNER's plan (they pay) and the workspace's
-  // agent count — agents are shared, so teammates draw from the same allowance.
-  const account = await getAccount(req.ownerId);
-  const plan = getPlan(account?.plan);
-  const agentCount = await Agent.countDocuments({ workspaceId: req.workspaceId });
-  if (agentCount >= plan.maxAgents) {
-    throw new AppError(
-      `Your ${plan.name} plan includes ${plan.maxAgents} agent${plan.maxAgents === 1 ? '' : 's'}. Upgrade to create more.`,
-      403,
-      'PLAN_AGENT_LIMIT'
-    );
-  }
-
   // Atomically claim the draft for creation (prevents duplicate submissions).
   const draft = await AgentDraft.findOneAndUpdate(
     { _id: req.params.draftId, userId, status: { $in: ['draft', 'ready-for-review', 'failed'] } },
@@ -460,7 +445,7 @@ export const createVapiAgent = asyncHandler(async (req, res) => {
     const assistant = await createAssistant(payload, vapiConfig);
 
     const agent = await Agent.create({
-      // Billing account = workspace owner; `createdByUserId` records the builder.
+      // Owning account = workspace owner; `createdByUserId` records the builder.
       userId: req.ownerId,
       workspaceId: req.workspaceId,
       createdByUserId: userId,

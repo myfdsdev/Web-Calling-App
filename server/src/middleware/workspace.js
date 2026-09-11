@@ -4,7 +4,7 @@ import { can } from '../config/roles.js';
 import { resolveWorkspace } from '../services/workspaceService.js';
 
 /**
- * Everything downstream scopes its data by `req.workspaceId` and bills
+ * Everything downstream scopes its data by `req.workspaceId` and attributes it to
  * `req.ownerId`. `req.user.id` stays "who is acting", never "whose data is this".
  */
 function attach(req, workspace, membership) {
@@ -12,7 +12,7 @@ function attach(req, workspace, membership) {
   req.membership = membership;
   req.workspaceId = workspace._id;
   req.role = membership?.role || 'viewer';
-  // Plan and credits live on the workspace owner — members spend the owner's balance.
+  // Agents and leads belong to the workspace owner's account, whoever built them.
   req.ownerId = workspace.ownerId;
 }
 

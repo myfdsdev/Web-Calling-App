@@ -10,7 +10,6 @@ import inviteRoutes from './routes/inviteRoutes.js';
 import agentBuilderRoutes from './routes/agentBuilderRoutes.js';
 import agentRoutes from './routes/agentRoutes.js';
 import leadRoutes from './routes/leadRoutes.js';
-import billingRoutes from './routes/billingRoutes.js';
 import vapiRoutes from './routes/vapiRoutes.js';
 import publicRoutes from './routes/publicRoutes.js';
 import platformRoutes from './routes/platformRoutes.js';
@@ -44,7 +43,6 @@ export function createApp() {
   app.use('/api/agent-builder', agentBuilderRoutes);
   app.use('/api/agents', agentRoutes);
   app.use('/api/leads', leadRoutes);
-  app.use('/api/billing', billingRoutes);
   app.use('/api/vapi', vapiRoutes);
   app.use('/api/public', publicRoutes);
   // Server-to-server store bridge (its own /api/v1 namespace, guarded by a shared

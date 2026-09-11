@@ -1,8 +1,8 @@
 /**
  * Workspace roles and exactly what each one may do.
  *
- *   owner  — the billing account behind the workspace. Exactly one; can do anything.
- *   admin  — runs the team day to day: people, agents, leads. No billing changes.
+ *   owner  — the account behind the workspace. Exactly one; can do anything.
+ *   admin  — runs the team day to day: people, agents, leads.
  *   member — builds agents and works the leads. Cannot manage people.
  *   viewer — read-only.
  *
@@ -35,8 +35,8 @@ export const ROLE_LABELS = {
 };
 
 export const ROLE_DESCRIPTIONS = {
-  owner: 'Full access, including billing and deleting the workspace.',
-  admin: 'Invite teammates and manage agents & leads. No billing access.',
+  owner: 'Full access, including deleting the workspace.',
+  admin: 'Invite teammates and manage agents & leads.',
   member: 'Build and edit agents, and work the leads.',
   viewer: 'Read-only access to agents and leads.',
 };
@@ -55,8 +55,6 @@ export const ALL_PERMISSIONS = [
   'agents:write',
   'leads:read',
   'leads:write',
-  'billing:read',
-  'billing:manage',
   'apikeys:read',
   'apikeys:manage',
 ];
@@ -73,7 +71,6 @@ const PERMISSIONS = {
     'agents:write',
     'leads:read',
     'leads:write',
-    'billing:read',
     'apikeys:read',
     'apikeys:manage',
   ],
@@ -84,9 +81,8 @@ const PERMISSIONS = {
     'agents:write',
     'leads:read',
     'leads:write',
-    'billing:read',
   ],
-  viewer: ['workspace:read', 'members:read', 'agents:read', 'leads:read', 'billing:read'],
+  viewer: ['workspace:read', 'members:read', 'agents:read', 'leads:read'],
 };
 
 /** True when `role` holds `permission`. */

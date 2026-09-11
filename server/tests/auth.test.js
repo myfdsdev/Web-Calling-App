@@ -13,7 +13,7 @@ describe('Auth', () => {
     expect(res.body.data.user.email).toBe('ada@test.dev');
   });
 
-  it('registers an admin account provisioned on the Admin plan', async () => {
+  it('registers an admin account', async () => {
     const res = await request(app)
       .post('/api/auth/register-admin')
       .send({ name: 'Admina', email: 'admin@test.dev', password: 'password123' });

@@ -8,8 +8,8 @@ import { Button } from '../components/ui/Button.jsx';
 import { useAuthStore } from '../stores/authStore.js';
 
 /**
- * Dedicated Admin registration. A successful signup is provisioned on the Admin
- * plan server-side, so the new user lands on their own manageable workspace.
+ * Dedicated Admin registration. A successful signup is marked as an admin account
+ * server-side, so the new user lands on their own manageable workspace.
  */
 export default function RegisterAdminPage() {
   const registerAdmin = useAuthStore((s) => s.registerAdmin);
@@ -39,11 +39,11 @@ export default function RegisterAdminPage() {
     <AuthShell>
       <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1 text-[12px] font-semibold text-ink-soft">
         <ShieldCheck className="h-3.5 w-3.5 text-primary" />
-        Admin plan
+        Admin account
       </span>
       <h1 className="mt-3 text-2xl font-bold text-ink">Create your admin workspace</h1>
       <p className="mt-1.5 text-sm text-ink-soft">
-        Sign up to run your own workspace — invite users, grant features, and share a credit budget.
+        Sign up to run your own workspace — invite users and manage what they can do.
       </p>
 
       <form onSubmit={onSubmit} className="mt-8 space-y-4">

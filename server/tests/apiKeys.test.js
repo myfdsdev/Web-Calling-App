@@ -85,7 +85,6 @@ describe('BYOK API keys', () => {
 
   it('blocks members from viewing or managing keys', async () => {
     const owner = await makeUser();
-    await owner.bearer(request(app).post('/api/billing/plan')).send({ planId: 'pro' });
     const member = await makeUser();
 
     const ws = (await owner.bearer(request(app).post('/api/workspaces')).send({ name: 'Acme' })).body.data
@@ -151,7 +150,7 @@ describe('BYOK API keys', () => {
     }
   });
 
-  it('runs public chat on the workspace Gemini key without charging app credits', async () => {
+  it('runs public chat on the workspace Gemini key', async () => {
     const user = await makeUser();
     const ws = await personalWorkspace(user);
 
@@ -169,16 +168,13 @@ describe('BYOK API keys', () => {
       geminiApiKey: 'gm-byo-workspace-key',
     });
 
-    const billing = () => user.bearer(request(app).get('/api/billing/me'));
-    const before = (await billing()).body.data.credits.total;
+    const gemini = await resolveGeminiConfig(ws.id);
+    expect(gemini.apiKey).toBe('gm-byo-workspace-key');
 
     const chat = await request(app)
       .post(`/api/public/agents/${agent.publicId}/chat`)
       .send({ sessionId: 'byo1', messages: [{ role: 'user', content: 'hello there' }] });
     expect(chat.status).toBe(200);
     expect(chat.body.data.unavailable).toBeUndefined();
-
-    const after = (await billing()).body.data.credits.total;
-    expect(after).toBe(before); // BYO usage → app charges nothing
   });
 });
